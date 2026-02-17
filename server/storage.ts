@@ -1,38 +1,36 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { cheatSheets, type InsertCheatSheet, type CheatSheet } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createCheatSheet(data: InsertCheatSheet): Promise<CheatSheet>;
+  getCheatSheet(id: number): Promise<CheatSheet | undefined>;
+  getAllCheatSheets(): Promise<CheatSheet[]>;
+  updateCheatSheet(id: number, data: Partial<CheatSheet>): Promise<CheatSheet>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async createCheatSheet(data: InsertCheatSheet): Promise<CheatSheet> {
+    const [cheatSheet] = await db.insert(cheatSheets).values(data).returning();
+    return cheatSheet;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getCheatSheet(id: number): Promise<CheatSheet | undefined> {
+    const [cheatSheet] = await db.select().from(cheatSheets).where(eq(cheatSheets.id, id));
+    return cheatSheet;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getAllCheatSheets(): Promise<CheatSheet[]> {
+    return await db.select().from(cheatSheets).orderBy(desc(cheatSheets.createdAt));
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateCheatSheet(id: number, data: Partial<CheatSheet>): Promise<CheatSheet> {
+    const [updated] = await db.update(cheatSheets)
+      .set(data)
+      .where(eq(cheatSheets.id, id))
+      .returning();
+    return updated;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
