@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertCheatSheetSchema, cheatSheets } from './schema';
+import { cheatSheets } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -34,12 +34,23 @@ export const api = {
     upload: {
       method: 'POST' as const,
       path: '/api/upload' as const,
-      // Input is multipart/form-data, not validated by Zod here, but response is typed
       responses: {
         201: z.object({
           id: z.number(),
-          url: z.string(),
-          filename: z.string()
+          url: z.string().nullable(),
+          filename: z.string().nullable(),
+        }),
+        400: errorSchemas.validation,
+      },
+    },
+    uploadText: {
+      method: 'POST' as const,
+      path: '/api/upload-text' as const,
+      responses: {
+        201: z.object({
+          id: z.number(),
+          url: z.string().nullable(),
+          filename: z.string().nullable(),
         }),
         400: errorSchemas.validation,
       },
@@ -48,11 +59,19 @@ export const api = {
       method: 'POST' as const,
       path: '/api/cheatsheets/:id/process' as const,
       responses: {
-        200: z.custom<typeof cheatSheets.$inferSelect>(), // Returns updated cheat sheet
+        200: z.custom<typeof cheatSheets.$inferSelect>(),
         404: errorSchemas.notFound,
         500: errorSchemas.internal,
       },
-    }
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/cheatsheets/:id' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
+      },
+    },
   },
 };
 

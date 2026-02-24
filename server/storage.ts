@@ -1,36 +1,24 @@
-import { db } from "./db";
-import { cheatSheets, type InsertCheatSheet, type CheatSheet } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { type InsertCheatSheet, type CheatSheet } from "@shared/schema";
 
 export interface IStorage {
   createCheatSheet(data: InsertCheatSheet): Promise<CheatSheet>;
   getCheatSheet(id: number): Promise<CheatSheet | undefined>;
   getAllCheatSheets(): Promise<CheatSheet[]>;
   updateCheatSheet(id: number, data: Partial<CheatSheet>): Promise<CheatSheet>;
+  deleteCheatSheet(id: number): Promise<void>;
 }
 
-export class DatabaseStorage implements IStorage {
-  async createCheatSheet(data: InsertCheatSheet): Promise<CheatSheet> {
-    const [cheatSheet] = await db.insert(cheatSheets).values(data).returning();
-    return cheatSheet;
-  }
+let storage: IStorage;
 
-  async getCheatSheet(id: number): Promise<CheatSheet | undefined> {
-    const [cheatSheet] = await db.select().from(cheatSheets).where(eq(cheatSheets.id, id));
-    return cheatSheet;
-  }
-
-  async getAllCheatSheets(): Promise<CheatSheet[]> {
-    return await db.select().from(cheatSheets).orderBy(desc(cheatSheets.createdAt));
-  }
-
-  async updateCheatSheet(id: number, data: Partial<CheatSheet>): Promise<CheatSheet> {
-    const [updated] = await db.update(cheatSheets)
-      .set(data)
-      .where(eq(cheatSheets.id, id))
-      .returning();
-    return updated;
-  }
+if (process.env.DATABASE_URL) {
+  // Use PostgreSQL storage
+  const { DatabaseStorage } = await import("./dbStorage");
+  storage = new DatabaseStorage();
+} else {
+  // Fallback to in-memory storage (no database required)
+  console.log("⚠️  No DATABASE_URL set. Using in-memory storage (data will not persist across restarts).");
+  const { MemoryStorage } = await import("./memoryStorage");
+  storage = new MemoryStorage();
 }
 
-export const storage = new DatabaseStorage();
+export { storage };

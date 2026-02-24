@@ -5,33 +5,33 @@
 @tailwind utilities;
 
 :root {
-  /* Clean Academic Palette - Sage Green Theme */
-  --sage-50: 247 250 245;   /* #f7faf5 - Background */
-  --sage-100: 236 242 232;  /* #ecf2e8 - Light bg elements */
-  --sage-200: 212 226 204;  /* #d4e2cc - Borders / Dividers */
-  --sage-300: 182 204 168;  /* #b6cca8 - Decorative elements */
-  --sage-400: 156 175 136;  /* #9caf88 - PRIMARY BRAND COLOR */
-  --sage-500: 125 145 105;  /* #7d9169 - Hover states */
-  --sage-600: 98 115 82;    /* #627352 - Text emphasis */
-  --sage-700: 76 89 63;     /* #4c593f - Headings */
-  --sage-800: 60 70 51;     /* #3c4633 - Dark text */
-  --sage-900: 48 56 42;     /* #30382a - Almost black */
+  /* Bright Emerald & White Palette */
+  --em-50:  236 253 245;   /* #ecfdf5 - Background */
+  --em-100: 209 250 229;   /* #d1fae5 - Light bg elements */
+  --em-200: 167 243 208;   /* #a7f3d0 - Borders / Dividers */
+  --em-300: 110 231 183;   /* #6ee7b7 - Decorative elements */
+  --em-400:  52 211 153;   /* #34d399 - Lighter brand */
+  --em-500:  16 185 129;   /* #10b981 - PRIMARY BRAND COLOR */
+  --em-600:   5 150 105;   /* #059669 - Hover states */
+  --em-700:   4 120  87;   /* #047857 - Text emphasis */
+  --em-800:   6  95  70;   /* #065f46 - Headings */
+  --em-900:   6  78  59;   /* #064e3b - Almost black */
 
   --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  
-  --primary: 94 18% 61%;      /* Matches Sage #9CAF88 approximately in HSL */
+  --foreground: 160 84% 10%;
+
+  --primary: 160 84% 39%;      /* Emerald #10b981 in HSL */
   --primary-foreground: 0 0% 100%;
-  
-  --muted: 100 20% 96%;
-  --muted-foreground: 100 10% 40%;
-  
-  --accent: 100 20% 94%;
-  --accent-foreground: 100 25% 30%;
-  
+
+  --muted: 152 76% 97%;
+  --muted-foreground: 155 30% 35%;
+
+  --accent: 152 76% 95%;
+  --accent-foreground: 155 60% 20%;
+
   --destructive: 0 84% 60%;
-  --border: 100 15% 90%;
-  --ring: 94 18% 61%;
+  --border: 152 60% 88%;
+  --ring: 160 84% 39%;
 
   --font-sans: 'DM Sans', sans-serif;
   --font-display: 'Outfit', sans-serif;
@@ -40,31 +40,31 @@
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased selection:bg-[#9CAF88] selection:text-white;
+    @apply bg-background text-foreground antialiased selection:bg-emerald-400 selection:text-white;
     font-family: var(--font-sans);
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    @apply font-bold tracking-tight text-[#4c593f];
+    @apply font-bold tracking-tight text-emerald-900;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-[#9CAF88] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#9CAF88]/20 transition-all hover:bg-[#7d9169] hover:shadow-xl hover:shadow-[#9CAF88]/30 hover:-translate-y-0.5 active:translate-y-0 active:shadow-md disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0 active:shadow-md disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border-2 border-[#d4e2cc] bg-white px-6 py-3 text-sm font-semibold text-[#627352] transition-all hover:border-[#9CAF88] hover:bg-[#f7faf5] hover:text-[#4c593f] active:bg-[#ecf2e8] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-xl border-2 border-emerald-200 bg-white px-6 py-3 text-sm font-semibold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-900 active:bg-emerald-100 disabled:pointer-events-none disabled:opacity-50;
   }
-  
+
   .card-sage {
-    @apply rounded-2xl bg-white border border-[#d4e2cc] shadow-sm hover:shadow-md hover:border-[#9CAF88] transition-all duration-300;
+    @apply rounded-2xl bg-white border border-emerald-200 shadow-sm hover:shadow-md hover:border-emerald-400 transition-all duration-300;
   }
 
   .sage-gradient {
-    background: linear-gradient(135deg, #f7faf5 0%, #ffffff 100%);
+    background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);
   }
 
   .a4-paper {
@@ -86,9 +86,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4e2cc;
+  background: #a7f3d0;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9caf88;
+  background: #10b981;
 }

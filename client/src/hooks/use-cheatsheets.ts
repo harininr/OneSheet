@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type CheatSheetResponse } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 
 // GET /api/cheatsheets
@@ -26,15 +26,15 @@ export function useCheatSheet(id: number) {
       return api.cheatSheets.get.responses[200].parse(await res.json());
     },
     // Poll every 2 seconds if processing (no extracted content yet)
-    refetchInterval: (data) => {
-      if (!data) return false;
-      // If we have content, stop polling. If not, keep checking.
-      return !data.structuredContent ? 2000 : false;
+    refetchInterval: (query) => {
+      const d = query.state.data;
+      if (!d) return false;
+      return !d.structuredContent ? 2000 : false;
     },
   });
 }
 
-// POST /api/upload
+// POST /api/upload (image file)
 export function useUploadCheatSheet() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -55,7 +55,7 @@ export function useUploadCheatSheet() {
         }
         throw new Error("Upload failed");
       }
-      
+
       return api.cheatSheets.upload.responses[201].parse(await res.json());
     },
     onSuccess: () => {
@@ -71,22 +71,57 @@ export function useUploadCheatSheet() {
   });
 }
 
+// POST /api/upload-text (raw text input)
+export function useUploadText() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ text, title }: { text: string; title?: string }) => {
+      const res = await fetch(api.cheatSheets.uploadText.path, {
+        method: api.cheatSheets.uploadText.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, title }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || "Text submission failed");
+      }
+
+      return api.cheatSheets.uploadText.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.cheatSheets.list.path] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Submission Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+}
+
 // POST /api/cheatsheets/:id/process
 export function useProcessCheatSheet() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id, domain = "general", layout = "grid" }: { id: number; domain?: string; layout?: string }) => {
       const url = buildUrl(api.cheatSheets.process.path, { id });
       const res = await fetch(url, {
         method: api.cheatSheets.process.method,
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain, layout }),
       });
 
       if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
         if (res.status === 404) throw new Error("Cheat sheet not found");
-        throw new Error("Processing failed");
+        throw new Error((errData as any).message || "Processing failed");
       }
 
       return api.cheatSheets.process.responses[200].parse(await res.json());
@@ -94,10 +129,6 @@ export function useProcessCheatSheet() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [api.cheatSheets.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.cheatSheets.get.path, data.id] });
-      toast({
-        title: "Processing Started",
-        description: "Your cheat sheet is being generated. This may take a moment.",
-      });
     },
     onError: (error) => {
       toast({
@@ -105,6 +136,28 @@ export function useProcessCheatSheet() {
         description: error.message,
         variant: "destructive",
       });
+    }
+  });
+}
+
+// DELETE /api/cheatsheets/:id
+export function useDeleteCheatSheet() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const url = buildUrl(api.cheatSheets.delete.path, { id });
+      const res = await fetch(url, { method: api.cheatSheets.delete.method });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.cheatSheets.list.path] });
+      toast({ title: "Deleted", description: "Cheat sheet removed." });
+    },
+    onError: () => {
+      toast({ title: "Delete Failed", description: "Could not remove cheat sheet.", variant: "destructive" });
     }
   });
 }
