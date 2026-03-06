@@ -69,13 +69,18 @@ const DOMAIN_INSTRUCTIONS: Record<Domain, string> = {
 - Use type "fact" for general legal principles.`,
 };
 
+// ─── MEGA AI PROMPT (Cheat Sheet + Concept Map + Key Terms + Quiz) ─────────
 const AI_PROMPT = (content: string, domain: Domain, layout: Layout) => `
 You are an elite academic compression engine with domain intelligence.
 
 Domain: ${domain.toUpperCase()}
 Layout: ${layout}
 
-Transform the following study content into a structured one-page revision sheet.
+Transform the following study content into a COMPREHENSIVE study package with 4 components.
+
+═══════════════════════════════════════
+COMPONENT 1: STRUCTURED CHEAT SHEET
+═══════════════════════════════════════
 
 DOMAIN-SPECIFIC RULES:
 ${DOMAIN_INSTRUCTIONS[domain]}
@@ -89,6 +94,33 @@ UNIVERSAL RULES:
 - Use type "advantage" for benefits, pros, or positive outcomes.
 
 POINT TYPES ALLOWED: "definition", "formula", "algorithm", "case", "advantage", "warning", "fact"
+
+═══════════════════════════════════════
+COMPONENT 2: CONCEPT MAP
+═══════════════════════════════════════
+- Identify 8–15 key concepts from the content.
+- Each node has: id (short lowercase slug), label (display name), group (section heading it belongs to), importance ("high", "medium", or "low").
+- Create 10–20 edges connecting related concepts.
+- Each edge has: from (node id), to (node id), label (relationship like "uses", "extends", "part of", "requires", "produces", "contains").
+- Make the concept map reveal the hidden structure of the topic.
+
+═══════════════════════════════════════
+COMPONENT 3: KEY TERMS
+═══════════════════════════════════════
+- Extract 8–15 key terms/vocabulary from the content.
+- Each term has: term (the word/phrase), definition (1–2 sentence explanation), importance ("critical", "important", or "supplementary"), relatedTerms (array of 1–3 other terms from the list).
+- Focus on terms that students would be tested on.
+
+═══════════════════════════════════════
+COMPONENT 4: QUIZ
+═══════════════════════════════════════
+- Generate 8–12 multiple-choice questions that test understanding of the content.
+- Each question has: id (q1, q2, etc.), question (the question text), options (array of exactly 4 answer choices), correctIndex (0-based index of correct answer), explanation (why the correct answer is right, 1–2 sentences), difficulty ("easy", "medium", or "hard"), relatedSection (section heading it relates to).
+- Mix difficulty: ~30% easy, ~40% medium, ~30% hard.
+- Questions should test UNDERSTANDING, not just recall.
+- Include at least 2 "tricky" questions that test common misconceptions.
+
+═══════════════════════════════════════
 
 Output STRICTLY this JSON (no markdown, no extra text):
 {
@@ -104,7 +136,32 @@ Output STRICTLY this JSON (no markdown, no extra text):
         { "text": "...", "type": "formula", "starred": true }
       ]
     }
-  ]
+  ],
+  "conceptMap": {
+    "nodes": [
+      { "id": "node_slug", "label": "Display Name", "group": "Section Heading", "importance": "high" }
+    ],
+    "edges": [
+      { "from": "node_a", "to": "node_b", "label": "uses" }
+    ]
+  },
+  "keyTerms": [
+    { "term": "Term Name", "definition": "Brief explanation.", "importance": "critical", "relatedTerms": ["Other Term"] }
+  ],
+  "quiz": {
+    "questions": [
+      {
+        "id": "q1",
+        "question": "What is ...?",
+        "options": ["A", "B", "C", "D"],
+        "correctIndex": 0,
+        "explanation": "Because ...",
+        "difficulty": "medium",
+        "relatedSection": "Section Heading"
+      }
+    ],
+    "totalPoints": 10
+  }
 }
 
 Content:
@@ -171,6 +228,37 @@ async function seedDatabase() {
           sectionCount: 2,
           conceptCount: 6,
           starredCount: 2,
+        },
+        conceptMap: {
+          nodes: [
+            { id: "photosynthesis", label: "Photosynthesis", group: "Definition", importance: "high" },
+            { id: "chloroplast", label: "Chloroplast", group: "Definition", importance: "high" },
+            { id: "sunlight", label: "Sunlight", group: "Core Equation", importance: "medium" },
+            { id: "glucose", label: "Glucose", group: "Core Equation", importance: "high" },
+            { id: "oxygen", label: "Oxygen", group: "Core Equation", importance: "medium" },
+            { id: "co2", label: "CO₂", group: "Core Equation", importance: "medium" },
+            { id: "water", label: "H₂O", group: "Core Equation", importance: "low" },
+          ],
+          edges: [
+            { from: "sunlight", to: "photosynthesis", label: "powers" },
+            { from: "co2", to: "photosynthesis", label: "reactant" },
+            { from: "water", to: "photosynthesis", label: "reactant" },
+            { from: "photosynthesis", to: "glucose", label: "produces" },
+            { from: "photosynthesis", to: "oxygen", label: "releases" },
+            { from: "chloroplast", to: "photosynthesis", label: "site of" },
+          ]
+        },
+        keyTerms: [
+          { term: "Photosynthesis", definition: "Process converting light energy to chemical energy in glucose.", importance: "critical", relatedTerms: ["Chloroplast", "Glucose"] },
+          { term: "Chloroplast", definition: "Organelle in plant cells where photosynthesis occurs.", importance: "critical", relatedTerms: ["Photosynthesis"] },
+          { term: "Glucose", definition: "Simple sugar (C₆H₁₂O₆) produced as the main product of photosynthesis.", importance: "important", relatedTerms: ["Photosynthesis"] },
+        ],
+        quiz: {
+          questions: [
+            { id: "q1", question: "What is the primary product of photosynthesis?", options: ["Oxygen", "Glucose", "Carbon Dioxide", "Water"], correctIndex: 1, explanation: "Glucose is the main energy-storing product of photosynthesis.", difficulty: "easy", relatedSection: "Core Equation" },
+            { id: "q2", question: "Where does photosynthesis occur in plant cells?", options: ["Nucleus", "Mitochondria", "Chloroplast", "Cell Wall"], correctIndex: 2, explanation: "Chloroplasts contain chlorophyll which captures light energy.", difficulty: "easy", relatedSection: "Definition" },
+          ],
+          totalPoints: 2,
         }
       }
     });
@@ -259,13 +347,14 @@ export async function registerRoutes(
         return res.status(422).json({ message: "No content to process." });
       }
 
-      // Step 2: Domain-aware AI compression
+      // Step 2: MEGA AI generation — all features in a single prompt
       const result = await getAI().models.generateContent({
         model: "gemini-2.5-flash",
         contents: [{ role: "user", parts: [{ text: AI_PROMPT(textToProcess, domain, layout) }] }],
       });
 
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      console.log("[AI DEBUG] Raw response length:", responseText.length);
       const cleanJson = responseText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
       let structuredContent: any;
@@ -279,6 +368,9 @@ export async function registerRoutes(
           throw new Error("AI returned invalid JSON.");
         }
       }
+
+      console.log("[AI DEBUG] Parsed keys:", Object.keys(structuredContent));
+      console.log("[AI DEBUG] Has conceptMap:", !!structuredContent.conceptMap, "| Has keyTerms:", !!structuredContent.keyTerms, "| Has quiz:", !!structuredContent.quiz);
 
       if (!structuredContent.title || !Array.isArray(structuredContent.sections)) {
         throw new Error("AI response missing required fields.");
@@ -298,6 +390,57 @@ export async function registerRoutes(
       structuredContent.metrics = computeMetrics(textToProcess, structuredContent);
       structuredContent.domain = domain;
       structuredContent.layout = layout;
+
+      // Ensure quiz has totalPoints
+      if (structuredContent.quiz && structuredContent.quiz.questions) {
+        structuredContent.quiz.totalPoints = structuredContent.quiz.questions.length;
+      }
+
+      // ── FALLBACK: If AI didn't return concept map, key terms or quiz, generate them ──
+      if (!structuredContent.conceptMap || !structuredContent.conceptMap.nodes || structuredContent.conceptMap.nodes.length === 0) {
+        console.log("[AI DEBUG] conceptMap missing, generating via second call...");
+        try {
+          const cmResult = await getAI().models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{
+              role: "user", parts: [{
+                text: `Analyze this content and create a concept map. Return ONLY valid JSON, no markdown.
+
+Content: ${textToProcess}
+
+Return this exact JSON structure:
+{"conceptMap":{"nodes":[{"id":"slug","label":"Name","group":"Category","importance":"high|medium|low"}],"edges":[{"from":"id1","to":"id2","label":"relationship"}]},"keyTerms":[{"term":"Term","definition":"Explanation","importance":"critical|important|supplementary","relatedTerms":["Other"]}],"quiz":{"questions":[{"id":"q1","question":"Question?","options":["A","B","C","D"],"correctIndex":0,"explanation":"Why","difficulty":"easy|medium|hard","relatedSection":"Topic"}],"totalPoints":8}}
+
+Rules:
+- 8-15 concept nodes with clear relationships
+- 10-20 edges showing how concepts connect
+- 8-15 key terms with definitions
+- 8-12 quiz questions (mix of easy/medium/hard)
+- Questions should test UNDERSTANDING not just recall` }]
+            }],
+          });
+          const cmText = cmResult.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          const cmClean = cmText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+          let cmParsed: any;
+          try {
+            cmParsed = JSON.parse(cmClean);
+          } catch {
+            const match = cmClean.match(/\{[\s\S]*\}/);
+            if (match) cmParsed = JSON.parse(match[0]);
+          }
+          if (cmParsed) {
+            if (cmParsed.conceptMap) structuredContent.conceptMap = cmParsed.conceptMap;
+            if (cmParsed.keyTerms) structuredContent.keyTerms = cmParsed.keyTerms;
+            if (cmParsed.quiz) {
+              structuredContent.quiz = cmParsed.quiz;
+              structuredContent.quiz.totalPoints = structuredContent.quiz.questions?.length || 0;
+            }
+            console.log("[AI DEBUG] Fallback generated - conceptMap:", !!structuredContent.conceptMap, "keyTerms:", !!structuredContent.keyTerms, "quiz:", !!structuredContent.quiz);
+          }
+        } catch (fallbackError: any) {
+          console.error("[AI DEBUG] Fallback generation failed:", fallbackError.message);
+        }
+      }
 
       const updated = await storage.updateCheatSheet(id, { structuredContent });
       res.json(updated);
