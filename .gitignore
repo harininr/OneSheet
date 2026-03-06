@@ -5,3 +5,7 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+.env2
+uploads/
+dummy_image.png
+script/test_features.mjs
