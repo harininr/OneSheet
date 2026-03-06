@@ -16,7 +16,7 @@ type ViewMode = "cheatsheet" | "conceptmap" | "keyterms" | "quiz";
 
 const OCR_STEPS = [
   "Upload received",
-  "Extracting text (OCR)",
+  "AI Vision reading your notes ✍️",
   "Generating cheat sheet",
   "Building concept map",
   "Extracting key terms",
@@ -142,10 +142,10 @@ export default function CheatSheetDetail() {
                     onClick={() => !isDisabled && setActiveMode(tab.key)}
                     disabled={isDisabled}
                     className={`relative flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all ${isActive
-                        ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg`
-                        : isDisabled
-                          ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                          : "bg-white border border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:shadow-sm"
+                      ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg`
+                      : isDisabled
+                        ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                        : "bg-white border border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:shadow-sm"
                       }`}
                   >
                     <tab.icon className="h-4 w-4" />
