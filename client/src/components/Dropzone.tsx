@@ -46,7 +46,7 @@ export function Dropzone({ onDropImage, onSubmitText, isUploading = false }: Dro
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: onDropCallback,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.heic', '.heif', '.tiff', '.tif'], 'application/pdf': ['.pdf'] },
     maxFiles: 1,
     disabled: isUploading || mode !== "image",
     noClick: mode !== "image",
@@ -163,9 +163,14 @@ export function Dropzone({ onDropImage, onSubmitText, isUploading = false }: Dro
                       <h3 className="font-display text-lg font-bold text-emerald-900">
                         {isDragActive ? "Drop it here!" : "Upload your notes"}
                       </h3>
-                      <p className="mt-1 max-w-xs text-sm text-emerald-600">Drag & drop handwritten notes, slides, or textbook photos</p>
-                      <div className="mt-4 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-xs font-medium text-emerald-600">
-                        PNG · JPG · WEBP
+                      <p className="mt-1 max-w-xs text-sm text-emerald-600">
+                        Drag & drop <strong>handwritten notes</strong>, slides, textbook photos, or printed pages
+                      </p>
+                      <p className="mt-1 text-xs text-emerald-400">
+                        ✍️ AI Vision reads handwriting, diagrams, formulas & annotations
+                      </p>
+                      <div className="mt-3 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-xs font-medium text-emerald-600">
+                        PNG · JPG · WEBP · HEIC · BMP · TIFF · PDF
                       </div>
                     </motion.div>
                   )}
