@@ -101,7 +101,11 @@ export function A4Preview({ data: rawData }: A4PreviewProps) {
   };
 
   // ── Grid columns based on layout ──
-  const gridCols = data.layout === "column" ? "1fr" : "1fr 1fr";
+  const getGridCols = () => {
+    if (data.layout === "column") return "1fr";
+    if (data.layout === "boxed") return data.sections.length <= 3 ? "1fr" : "1fr 1fr";
+    return data.sections.length <= 2 ? "1fr" : "1fr 1fr";
+  };
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -215,7 +219,7 @@ export function A4Preview({ data: rawData }: A4PreviewProps) {
           {/* Sections */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: data.layout === "column" ? "1fr" : "1fr 1fr",
+            gridTemplateColumns: getGridCols(),
             gap: "14px",
             alignContent: "start",
           }}>
@@ -223,8 +227,14 @@ export function A4Preview({ data: rawData }: A4PreviewProps) {
               const accent = SECTION_ACCENTS[idx % SECTION_ACCENTS.length];
               return (
                 <div key={idx} style={{
-                  background: accent.bg, border: `1.5px solid ${accent.border}`,
-                  borderRadius: "12px", padding: "14px 16px", breakInside: "avoid"
+                  background: data.layout === "boxed" ? "#ffffff" : accent.bg,
+                  border: data.layout === "boxed"
+                    ? `2px solid ${accent.border}`
+                    : `1.5px solid ${accent.border}`,
+                  borderRadius: "12px",
+                  padding: "14px 16px",
+                  breakInside: "avoid",
+                  boxShadow: data.layout === "boxed" ? `0 2px 8px ${accent.border}40` : "none",
                 }}>
 
                   {/* Section heading */}

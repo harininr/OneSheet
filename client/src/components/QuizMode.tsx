@@ -25,6 +25,8 @@ export function QuizMode({ quiz }: QuizModeProps) {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [showExplanation, setShowExplanation] = useState(false);
     const [startTime] = useState(Date.now());
+    const [streak, setStreak] = useState(0);
+    const [bestStreak, setBestStreak] = useState(0);
 
     const questions = quiz.questions;
     const current = questions[currentIndex];
@@ -50,6 +52,16 @@ export function QuizMode({ quiz }: QuizModeProps) {
             next.set(current.id, optionIndex);
             return next;
         });
+        // Streak tracking
+        if (optionIndex === current.correctIndex) {
+            setStreak(s => {
+                const next = s + 1;
+                setBestStreak(b => Math.max(b, next));
+                return next;
+            });
+        } else {
+            setStreak(0);
+        }
     }, [showExplanation, current]);
 
     const handleNext = useCallback(() => {
@@ -68,6 +80,8 @@ export function QuizMode({ quiz }: QuizModeProps) {
         setSelectedOption(null);
         setShowExplanation(false);
         setState("intro");
+        setStreak(0);
+        setBestStreak(0);
     }, []);
 
     const handleReview = useCallback(() => {
@@ -175,7 +189,7 @@ export function QuizMode({ quiz }: QuizModeProps) {
                 <div className="grid grid-cols-3 gap-4 w-full max-w-sm">
                     {[
                         { icon: Target, label: "Correct", value: `${score}/${questions.length}`, color: "text-emerald-600" },
-                        { icon: Flame, label: "Accuracy", value: `${pct}%`, color: "text-amber-600" },
+                        { icon: Flame, label: "Best Streak", value: `${bestStreak}🔥`, color: "text-amber-600" },
                         { icon: Clock, label: "Time", value: `${minutes}:${seconds.toString().padStart(2, "0")}`, color: "text-blue-600" },
                     ].map(s => (
                         <div key={s.label} className="flex flex-col items-center rounded-xl border border-emerald-100 bg-white p-3 shadow-sm">
@@ -287,8 +301,8 @@ export function QuizMode({ quiz }: QuizModeProps) {
                                         }`}
                                 >
                                     <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold ${isSelected ? (isCorrect ? "bg-green-500 text-white" : "bg-red-500 text-white") :
-                                            showCorrectHighlight ? "bg-green-500 text-white" :
-                                                "bg-emerald-50 text-emerald-600"
+                                        showCorrectHighlight ? "bg-green-500 text-white" :
+                                            "bg-emerald-50 text-emerald-600"
                                         }`}>
                                         {String.fromCharCode(65 + optIdx)}
                                     </span>
@@ -342,8 +356,16 @@ export function QuizMode({ quiz }: QuizModeProps) {
                     </>
                 ) : (
                     <>
-                        <div className="text-xs text-emerald-400 font-medium">
+                        <div className="flex items-center gap-3 text-xs text-emerald-400 font-medium">
                             Score: <span className="font-bold text-emerald-600">{score}</span>/{totalAnswered}
+                            {streak > 1 && (
+                                <motion.span
+                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                    className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-amber-700 font-bold"
+                                >
+                                    <Flame className="h-3 w-3" /> {streak} streak!
+                                </motion.span>
+                            )}
                         </div>
                         {showExplanation && (
                             <button

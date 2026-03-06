@@ -52,17 +52,18 @@ function computeLayout(nodes: ConceptNode[], edges: ConceptEdge[], width: number
         return { ...node, x, y };
     });
 
-    // Simple force-directed relaxation (3 iterations)
-    for (let iter = 0; iter < 3; iter++) {
+    // Force-directed relaxation — more iterations for cleaner layout
+    for (let iter = 0; iter < 8; iter++) {
         for (let i = 0; i < positioned.length; i++) {
             for (let j = i + 1; j < positioned.length; j++) {
                 const dx = positioned[j].x - positioned[i].x;
                 const dy = positioned[j].y - positioned[i].y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 90) {
-                    const force = (90 - dist) / 2;
-                    const fx = (dx / dist) * force;
-                    const fy = (dy / dist) * force;
+                const minDist = 100; // minimum separation
+                if (dist < minDist) {
+                    const force = (minDist - dist) / 2;
+                    const fx = (dx / Math.max(dist, 1)) * force;
+                    const fy = (dy / Math.max(dist, 1)) * force;
                     positioned[i].x -= fx;
                     positioned[i].y -= fy;
                     positioned[j].x += fx;

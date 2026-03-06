@@ -336,7 +336,7 @@ async function generateExtras(structuredContent: any, textContent: string) {
   console.log("[AI] Generating extras (concept map, key terms, quiz) via second call...");
   try {
     const result = await getAI().models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: [{ role: "user", parts: [{ text: EXTRAS_PROMPT(textContent) }] }],
     });
 
@@ -493,7 +493,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         // This is the key upgrade: Gemini Vision can read handwritten notes
         // far better than any OCR engine (Tesseract, etc.)
         const result = await getAI().models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-1.5-flash",
           contents: [{
             role: "user",
             parts: [
@@ -513,7 +513,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         console.log(`[AI] Vision response length: ${responseText.length} chars`);
 
-        structuredContent = parseAIResponse(responseText);
+        try {
+          structuredContent = parseAIResponse(responseText);
+        } catch (parseError) {
+          // Robust Fallback: If JSON parsing fails, try to extract JUST the text
+          // to at least save the digitized notes.
+          console.warn("[AI] Full structured generation failed. Attempting OCR fallback...");
+          const textOnlyResult = await getAI().models.generateContent({
+            model: "gemini-1.5-flash",
+            contents: [{
+              role: "user",
+              parts: [{ inlineData: { mimeType, data: base64Image } }, { text: "Read and return ONLY the raw text from this image. No commentary." }]
+            }]
+          });
+          const ocrOnlyText = textOnlyResult.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (ocrOnlyText) {
+            await storage.updateCheatSheet(id, { ocrText: ocrOnlyText });
+            throw new Error("AI understood the text but failed to build the study package structure. Please try clicking 'Re-process'.");
+          }
+          throw parseError;
+        }
 
         // Extract the raw text for metrics and saving
         textForMetrics = structuredContent.extractedText || "";
@@ -535,7 +554,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         console.log(`[AI] Processing text input (${textForMetrics.length} chars)`);
 
         const result = await getAI().models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-1.5-flash",
           contents: [{ role: "user", parts: [{ text: TEXT_PROMPT(textForMetrics, domain, layout) }] }],
         });
 

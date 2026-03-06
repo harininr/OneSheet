@@ -45,6 +45,21 @@ export function KeyTermsPanel({ terms }: KeyTermsPanelProps) {
         );
     }
 
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.05
+            }
+        }
+    };
+
+    const item = {
+        hidden: { opacity: 0, scale: 0.9, y: 10 },
+        show: { opacity: 1, scale: 1, y: 0 }
+    };
+
     return (
         <div className="flex flex-col gap-4">
             {/* Header */}
@@ -76,8 +91,8 @@ export function KeyTermsPanel({ terms }: KeyTermsPanelProps) {
                     <button
                         onClick={() => setFilterImportance(null)}
                         className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all border ${!filterImportance
-                                ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                                : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"
+                            ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                            : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"
                             }`}
                     >
                         All ({terms.length})
@@ -91,8 +106,8 @@ export function KeyTermsPanel({ terms }: KeyTermsPanelProps) {
                             key={f.key}
                             onClick={() => setFilterImportance(filterImportance === f.key ? null : f.key)}
                             className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all border ${filterImportance === f.key
-                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                                    : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"
+                                ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                                : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"
                                 }`}
                         >
                             {f.key.charAt(0).toUpperCase() + f.key.slice(1)} ({f.count})
@@ -102,20 +117,23 @@ export function KeyTermsPanel({ terms }: KeyTermsPanelProps) {
             </div>
 
             {/* Terms Grid */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+            >
                 <AnimatePresence mode="popLayout">
-                    {filtered.map((term, i) => {
+                    {filtered.map((term) => {
                         const badge = IMPORTANCE_BADGES[term.importance];
                         const isExpanded = expandedTerm === term.term;
 
                         return (
                             <motion.div
                                 key={term.term}
+                                variants={item}
                                 layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.2, delay: i * 0.03 }}
                                 className={`group rounded-xl border bg-white p-4 shadow-sm transition-all cursor-pointer hover:shadow-md ${isExpanded ? "border-emerald-400 ring-2 ring-emerald-500/10" : "border-emerald-100 hover:border-emerald-300"
                                     }`}
                                 onClick={() => setExpandedTerm(isExpanded ? null : term.term)}
@@ -167,7 +185,7 @@ export function KeyTermsPanel({ terms }: KeyTermsPanelProps) {
                         );
                     })}
                 </AnimatePresence>
-            </div>
+            </motion.div>
 
             {filtered.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-emerald-400">

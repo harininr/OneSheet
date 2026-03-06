@@ -1,5 +1,5 @@
-import { useParams, Link } from "wouter";
-import { useCheatSheet, useDeleteCheatSheet } from "@/hooks/use-cheatsheets";
+import { useParams, Link, useLocation } from "wouter";
+import { useCheatSheet, useDeleteCheatSheet, useProcessCheatSheet } from "@/hooks/use-cheatsheets";
 import { Navbar } from "@/components/Navbar";
 import { A4Preview } from "@/components/A4Preview";
 import { ConceptMap } from "@/components/ConceptMap";
@@ -7,10 +7,11 @@ import { KeyTermsPanel } from "@/components/KeyTermsPanel";
 import { QuizMode } from "@/components/QuizMode";
 import {
   Loader2, AlertCircle, ArrowLeft, Image as ImageIcon, CheckCircle2,
-  FileText, Network, BookOpen, Brain, Layers, Trash2
+  FileText, Network, BookOpen, Brain, Layers, Trash2, RefreshCw, Sparkles, Copy
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type ViewMode = "cheatsheet" | "conceptmap" | "keyterms" | "quiz";
 
@@ -34,8 +35,22 @@ const VIEW_TABS: { key: ViewMode; label: string; icon: React.ElementType; gradie
 export default function CheatSheetDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: sheet, isLoading, error } = useCheatSheet(Number(id));
+  const { toast } = useToast();
   const deleteMutation = useDeleteCheatSheet();
+  const processMutation = useProcessCheatSheet();
+  const [, setLocation] = useLocation();
   const [activeMode, setActiveMode] = useState<ViewMode>("cheatsheet");
+  const [activeStep, setActiveStep] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Animate processing steps
+  useEffect(() => {
+    if (!sheet || sheet.structuredContent) return;
+    const timer = setInterval(() => {
+      setActiveStep(s => (s < OCR_STEPS.length - 1 ? s + 1 : s));
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [sheet]);
 
   if (isLoading) {
     return (
@@ -75,6 +90,28 @@ export default function CheatSheetDetail() {
   const hasKeyTerms = content?.keyTerms && content.keyTerms.length > 0;
   const hasQuiz = content?.quiz && content.quiz.questions.length > 0;
 
+  const handleDelete = () => {
+    deleteMutation.mutate(sheet.id, {
+      onSuccess: () => setLocation("/"),
+    });
+  };
+
+  const handleReprocess = () => {
+    processMutation.mutate({
+      id: sheet.id,
+      domain: content?.domain || "general",
+      layout: content?.layout || "grid",
+    });
+  };
+
+  const handleCopyText = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard",
+      description: "You can now paste your OCR text anywhere.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-emerald-50/20 to-white">
       <Navbar />
@@ -96,6 +133,49 @@ export default function CheatSheetDetail() {
                 })}
               </span>
             )}
+
+            {/* Re-process button */}
+            {!isProcessing && (
+              <button
+                onClick={handleReprocess}
+                disabled={processMutation.isPending}
+                className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 transition-all hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-50"
+              >
+                {processMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Re-process
+              </button>
+            )}
+
+            {/* Delete button */}
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Confirm Delete"}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-500 transition-all hover:border-red-400 hover:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            )}
           </div>
         </div>
 
@@ -110,19 +190,35 @@ export default function CheatSheetDetail() {
 
             <div className="mt-8 w-full max-w-sm space-y-3">
               {OCR_STEPS.map((step, i) => (
-                <div key={step} className="flex items-center gap-3 text-sm">
-                  {i === 0 ? (
+                <motion.div
+                  key={step}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1, duration: 0.3 }}
+                  className="flex items-center gap-3 text-sm"
+                >
+                  {i < activeStep ? (
                     <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-500" />
-                  ) : i === 1 ? (
+                  ) : i === activeStep ? (
                     <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin text-emerald-500" />
                   ) : (
                     <div className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-emerald-200" />
                   )}
-                  <span className={i <= 1 ? "text-emerald-900 font-medium" : "text-emerald-200"}>
+                  <span className={i <= activeStep ? "text-emerald-900 font-medium" : "text-emerald-300"}>
                     {step}
                   </span>
-                </div>
+                </motion.div>
               ))}
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-6 w-full max-w-sm h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                initial={{ width: "0%" }}
+                animate={{ width: `${((activeStep + 1) / OCR_STEPS.length) * 100}%` }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+              />
             </div>
           </div>
         ) : (
@@ -193,20 +289,32 @@ export default function CheatSheetDetail() {
                 </div>
 
                 {!isTextInput && sheet.ocrText && (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-                    <h3 className="mb-2 font-bold text-emerald-900">Extracted Text</h3>
-                    <p className="text-xs text-emerald-600 mb-3">
-                      Raw OCR text before AI compression.
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm overflow-hidden relative group/sidebar">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-bold text-emerald-900">Extracted Text</h3>
+                      <button
+                        onClick={() => handleCopyText(sheet.ocrText || "")}
+                        className="p-1.5 rounded-lg bg-white border border-emerald-100 text-emerald-500 opacity-0 group-hover/sidebar:opacity-100 transition-opacity hover:bg-emerald-50"
+                        title="Copy text"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 mb-3 uppercase tracking-wider font-semibold">
+                      Raw text extracted by AI Vision
                     </p>
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-emerald-200 bg-white p-4 text-xs leading-relaxed text-emerald-900 font-mono">
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-emerald-200 bg-white p-4 text-xs leading-relaxed text-emerald-900 font-mono scrollbar-thin scrollbar-thumb-emerald-100">
                       {sheet.ocrText}
                     </div>
                   </div>
                 )}
 
-                {/* Sheet info */}
+                {/* Study Package info */}
                 <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-                  <h3 className="text-sm font-bold text-emerald-900 mb-3">Study Package</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-emerald-500" />
+                    <h3 className="text-sm font-bold text-emerald-900">Study Package</h3>
+                  </div>
                   <div className="space-y-2 text-xs text-emerald-600">
                     <div className="flex justify-between">
                       <span>Sections</span>
@@ -236,18 +344,32 @@ export default function CheatSheetDetail() {
                         <span className="font-semibold text-emerald-900">{content!.quiz!.questions.length}</span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span>AI model</span>
-                      <span className="font-semibold text-emerald-900">Gemini 2.5 Flash</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Source type</span>
-                      <span className="font-semibold text-emerald-900">{isTextInput ? "Text" : "Image (OCR)"}</span>
+                    {content!.metrics && (
+                      <div className="flex justify-between">
+                        <span>Compression</span>
+                        <span className="font-semibold text-emerald-900">{content!.metrics.reductionPercent}% reduced</span>
+                      </div>
+                    )}
+                    <div className="border-t border-emerald-100 pt-2 mt-2">
+                      <div className="flex justify-between">
+                        <span>AI model</span>
+                        <span className="font-semibold text-emerald-900">Gemini 2.5 Flash</span>
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span>Source</span>
+                        <span className="font-semibold text-emerald-900">{isTextInput ? "Text" : "Image (Vision AI)"}</span>
+                      </div>
+                      {content!.domain && (
+                        <div className="flex justify-between mt-1">
+                          <span>Domain</span>
+                          <span className="font-semibold text-emerald-900 uppercase">{content!.domain}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Feature availability badges */}
+                {/* Feature availability */}
                 <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
                   <h3 className="text-sm font-bold text-emerald-900 mb-3">Available Modes</h3>
                   <div className="space-y-2">
@@ -259,7 +381,15 @@ export default function CheatSheetDetail() {
                         (tab.key === "quiz" && hasQuiz);
 
                       return (
-                        <div key={tab.key} className="flex items-center gap-2 text-xs">
+                        <button
+                          key={tab.key}
+                          onClick={() => available && setActiveMode(tab.key)}
+                          disabled={!available}
+                          className={`flex w-full items-center gap-2 text-xs rounded-lg px-2 py-1.5 transition-all ${available
+                            ? "hover:bg-emerald-50 cursor-pointer"
+                            : "cursor-not-allowed opacity-40"
+                            }`}
+                        >
                           {available ? (
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                           ) : (
@@ -268,7 +398,7 @@ export default function CheatSheetDetail() {
                           <span className={available ? "text-emerald-900 font-medium" : "text-gray-300"}>
                             {tab.label}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
