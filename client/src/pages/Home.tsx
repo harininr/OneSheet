@@ -4,7 +4,7 @@ import { CheatSheetCard } from "@/components/CheatSheetCard";
 import { Dropzone } from "@/components/Dropzone";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Sparkles, FileText, Brain, Zap, Download } from "lucide-react";
+import { Sparkles, FileText, Brain, Zap, Download, Network, BookOpen } from "lucide-react";
 import type { Domain, Layout } from "@shared/schema";
 
 export default function Home() {
@@ -37,9 +37,11 @@ export default function Home() {
   };
 
   const features = [
-    { icon: Brain, title: "Domain-Aware AI", desc: "CS, Math, Biology, Law — each mode uses a specialized prompt" },
+    { icon: Brain, title: "AI Quiz Generator", desc: "Auto-generate MCQ quizzes from your notes with instant grading & explanations" },
+    { icon: Network, title: "Smart Concept Maps", desc: "Interactive SVG maps revealing hidden relationships between concepts" },
+    { icon: BookOpen, title: "Key Term Glossary", desc: "Critical terms extracted, defined, and cross-linked for quick review" },
     { icon: Zap, title: "Exam Priority ⭐", desc: "AI marks the most exam-critical concepts automatically" },
-    { icon: Download, title: "Download PNG/PDF", desc: "Export a pixel-perfect one-page cheat sheet" },
+    { icon: Download, title: "Multi-Mode Export", desc: "4 study modes + pixel-perfect PNG/PDF cheat sheet export" },
   ];
 
   return (
@@ -64,12 +66,12 @@ export default function Home() {
             </h1>
 
             <p className="mx-auto max-w-2xl text-lg text-emerald-700 mb-4 leading-relaxed">
-              Select your subject, upload notes or paste text. Our AI applies <strong>domain-specific intelligence</strong> —
-              extracting formulas for Math, algorithms for CS, case law for Law, and more.
+              Upload notes or paste text. AI generates a <strong>complete study package</strong> —
+              cheat sheet, concept map, key terms glossary, and interactive quiz. All in one click.
             </p>
 
             <div className="flex flex-wrap justify-center gap-2 mb-10">
-              {["CS mode", "Math formulas", "Exam priority ⭐", "Color-coded types", "PNG / PDF export"].map(tag => (
+              {["Concept Maps", "AI Quiz", "Key Terms", "Exam Priority ⭐", "Multi-Mode", "PNG / PDF"].map(tag => (
                 <span key={tag} className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-700">
                   {tag}
                 </span>
@@ -92,7 +94,7 @@ export default function Home() {
 
       {/* Feature cards */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {features.map((f, i) => (
             <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.3 + i * 0.1 }}

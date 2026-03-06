@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import type { Domain, Layout } from "@shared/schema";
 
 export default function Create() {
   const uploadMutation = useUploadCheatSheet();
@@ -14,20 +15,20 @@ export default function Create() {
 
   const isWorking = uploadMutation.isPending || uploadTextMutation.isPending || processMutation.isPending;
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (file: File, domain: Domain, layout: Layout) => {
     try {
       const result = await uploadMutation.mutateAsync(file);
-      await processMutation.mutateAsync(result.id);
+      await processMutation.mutateAsync({ id: result.id, domain, layout });
       setLocation(`/cheatsheet/${result.id}`);
     } catch (error) {
       console.error("Creation flow (image) failed", error);
     }
   };
 
-  const handleTextSubmit = async (text: string, title?: string) => {
+  const handleTextSubmit = async (text: string, title: string | undefined, domain: Domain, layout: Layout) => {
     try {
       const result = await uploadTextMutation.mutateAsync({ text, title });
-      await processMutation.mutateAsync(result.id);
+      await processMutation.mutateAsync({ id: result.id, domain, layout });
       setLocation(`/cheatsheet/${result.id}`);
     } catch (error) {
       console.error("Creation flow (text) failed", error);
