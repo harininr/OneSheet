@@ -35,12 +35,58 @@ export interface StructuredMetrics {
   starredCount: number;
 }
 
+// ── Concept Map Types ─────────────────────────────────────────────────────────
+export interface ConceptNode {
+  id: string;
+  label: string;
+  group: string;        // section heading it belongs to
+  importance: "high" | "medium" | "low";
+}
+
+export interface ConceptEdge {
+  from: string;
+  to: string;
+  label: string;        // relationship label like "uses", "extends", "part of"
+}
+
+export interface ConceptMap {
+  nodes: ConceptNode[];
+  edges: ConceptEdge[];
+}
+
+// ── Key Terms Types ───────────────────────────────────────────────────────────
+export interface KeyTerm {
+  term: string;
+  definition: string;
+  importance: "critical" | "important" | "supplementary";
+  relatedTerms?: string[];
+}
+
+// ── Quiz Types ────────────────────────────────────────────────────────────────
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  difficulty: "easy" | "medium" | "hard";
+  relatedSection: string;
+}
+
+export interface Quiz {
+  questions: QuizQuestion[];
+  totalPoints: number;
+}
+
 export interface StructuredContent {
   title: string;
   domain: Domain;
   layout: Layout;
   sections: StructuredSection[];
   metrics: StructuredMetrics;
+  conceptMap?: ConceptMap;
+  keyTerms?: KeyTerm[];
+  quiz?: Quiz;
 }
 
 export const cheatSheets = pgTable("cheat_sheets", {
