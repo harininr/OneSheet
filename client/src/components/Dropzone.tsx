@@ -3,7 +3,7 @@ import { useDropzone } from "react-dropzone";
 import {
   UploadCloud, File, Loader2, FileText, Image as ImageIcon, X, Wand2,
   Binary, FlaskConical, Scale, Calculator, Globe,
-  LayoutGrid, AlignLeft, Columns
+  LayoutGrid, AlignLeft, Columns, Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,11 +18,11 @@ interface DropzoneProps {
 }
 
 const DOMAINS: { value: Domain; label: string; icon: React.ElementType; color: string }[] = [
-  { value: "general", label: "General", icon: Globe, color: "text-emerald-500" },
-  { value: "cs", label: "CS / Code", icon: Binary, color: "text-blue-500" },
-  { value: "math", label: "Math", icon: Calculator, color: "text-violet-500" },
-  { value: "biology", label: "Biology", icon: FlaskConical, color: "text-teal-500" },
-  { value: "law", label: "Law", icon: Scale, color: "text-amber-500" },
+  { value: "general", label: "General", icon: Globe, color: "text-orange-400" },
+  { value: "cs", label: "CS / Code", icon: Binary, color: "text-blue-400" },
+  { value: "math", label: "Math", icon: Calculator, color: "text-violet-400" },
+  { value: "biology", label: "Biology", icon: FlaskConical, color: "text-teal-400" },
+  { value: "law", label: "Law", icon: Scale, color: "text-amber-400" },
 ];
 
 const LAYOUTS: { value: Layout; label: string; icon: React.ElementType }[] = [
@@ -60,117 +60,115 @@ export function Dropzone({ onDropImage, onSubmitText, isUploading = false }: Dro
 
   const charCount = text.length;
   const isTextReady = charCount >= 10;
-  const selectedDomain = DOMAINS.find(d => d.value === domain)!;
-  const DomainIcon = selectedDomain.icon;
 
   return (
-    <div className="relative flex flex-col gap-0 overflow-hidden rounded-2xl">
+    <div className="flex flex-col gap-0 overflow-hidden rounded-3xl">
       {/* Mode toggle */}
-      <div className="flex border-b border-emerald-100 bg-emerald-50">
+      <div className="flex border-b border-white/10 bg-white/5 backdrop-blur-md">
         <button type="button" onClick={() => setMode("image")} disabled={isUploading}
-          className={cn("flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-all",
-            mode === "image" ? "bg-white text-emerald-900 shadow-sm border-b-2 border-emerald-500"
-              : "text-emerald-600 hover:text-emerald-900 hover:bg-white/50"
+          className={cn("flex flex-1 items-center justify-center gap-2 py-4 text-sm font-bold transition-all",
+            mode === "image" ? "bg-white/10 text-orange-400 shadow-xl border-b-2 border-orange-500"
+              : "text-slate-400 hover:text-white hover:bg-white/5"
           )}>
-          <ImageIcon className="h-4 w-4" /> Upload Image
+          <ImageIcon className="h-4 w-4" /> Image
         </button>
         <button type="button" onClick={() => setMode("text")} disabled={isUploading}
-          className={cn("flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-all",
-            mode === "text" ? "bg-white text-emerald-900 shadow-sm border-b-2 border-emerald-500"
-              : "text-emerald-600 hover:text-emerald-900 hover:bg-white/50"
+          className={cn("flex flex-1 items-center justify-center gap-2 py-4 text-sm font-bold transition-all",
+            mode === "text" ? "bg-white/10 text-orange-400 shadow-xl border-b-2 border-orange-500"
+              : "text-slate-400 hover:text-white hover:bg-white/5"
           )}>
-          <FileText className="h-4 w-4" /> Paste Text
+          <FileText className="h-4 w-4" /> Notes
         </button>
       </div>
 
-      {/* Domain + Layout selectors */}
-      <div className="bg-white border-b border-emerald-100 px-4 py-3 space-y-3">
-        {/* Domain */}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-2">Subject Mode</p>
-          <div className="flex flex-wrap gap-1.5">
-            {DOMAINS.map(d => {
-              const Icon = d.icon;
-              const active = domain === d.value;
-              return (
-                <button key={d.value} type="button" onClick={() => setDomain(d.value)} disabled={isUploading}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all border",
-                    active
-                      ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                      : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"
-                  )}>
-                  <Icon className="h-3 w-3" />{d.label}
-                </button>
-              );
-            })}
+      {/* Selectors Area */}
+      <div className="bg-white/5 border-b border-white/10 px-6 py-5 space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* Domain */}
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500/80 mb-3 ml-1">Knowledge Domain</p>
+            <div className="flex flex-wrap gap-2">
+              {DOMAINS.map(d => {
+                const Icon = d.icon;
+                const active = domain === d.value;
+                return (
+                  <button key={d.value} type="button" onClick={() => setDomain(d.value)} disabled={isUploading}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all border",
+                      active
+                        ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/30 hover:bg-white/10"
+                    )}>
+                    <Icon className="h-3.5 w-3.5" />{d.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* Layout */}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-2">Layout</p>
-          <div className="flex gap-1.5">
-            {LAYOUTS.map(l => {
-              const Icon = l.icon;
-              const active = layout === l.value;
-              return (
-                <button key={l.value} type="button" onClick={() => setLayout(l.value)} disabled={isUploading}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all border",
-                    active
-                      ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                      : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"
-                  )}>
-                  <Icon className="h-3 w-3" />{l.label}
-                </button>
-              );
-            })}
+          {/* Layout */}
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500/80 mb-3 ml-1">Layout Preset</p>
+            <div className="flex gap-2">
+              {LAYOUTS.map(l => {
+                const Icon = l.icon;
+                const active = layout === l.value;
+                return (
+                  <button key={l.value} type="button" onClick={() => setLayout(l.value)} disabled={isUploading}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all border",
+                      active
+                        ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/30 hover:bg-white/10"
+                    )}>
+                    <Icon className="h-3.5 w-3.5" />{l.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Content area */}
-      <div className="bg-white">
+      {/* Main interaction Area */}
+      <div className="bg-white/5">
         <AnimatePresence mode="wait">
           {mode === "image" ? (
-            <motion.div key="image-mode" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
+            <motion.div key="image-mode" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }} className="p-2">
               <div {...getRootProps()} className={cn(
-                "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center border-2 border-dashed transition-all duration-300 ease-in-out",
-                isDragActive ? "border-emerald-500 bg-emerald-50 scale-[1.01]"
-                  : "border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/30",
-                isUploading && "pointer-events-none opacity-70"
+                "relative flex min-h-[240px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-500 ease-out p-8 text-center",
+                isDragActive ? "border-orange-500 bg-orange-500/10 shadow-[inner_0_0_30px_rgba(249,115,22,0.2)] scale-[0.99]"
+                  : "border-white/10 bg-transparent hover:border-white/30 hover:bg-white/[0.02]",
+                isUploading && "pointer-events-none opacity-50"
               )}>
                 <input {...getInputProps()} />
                 <AnimatePresence mode="wait">
                   {isUploading ? (
-                    <motion.div key="uploading" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }} className="flex flex-col items-center text-center p-6">
-                      <div className="mb-4 rounded-full bg-emerald-50 p-4 text-emerald-500">
-                        <Loader2 className="h-10 w-10 animate-spin" />
+                    <motion.div key="uploading" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }}
+                      className="flex flex-col items-center">
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10 text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.3)]">
+                        <Loader2 className="h-8 w-8 animate-spin" />
                       </div>
-                      <h3 className="text-lg font-bold text-emerald-900">Processing...</h3>
-                      <p className="mt-1 text-sm text-emerald-600">AI is compressing your notes</p>
+                      <h3 className="text-xl font-black text-white">Compressing...</h3>
+                      <p className="mt-2 text-sm text-slate-400 tracking-tight">AI Vision is reading your notes</p>
                     </motion.div>
                   ) : (
                     <motion.div key="idle" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }} className="flex flex-col items-center text-center p-6">
-                      <div className={cn("mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors duration-300",
-                        isDragActive ? "bg-emerald-500 text-white shadow-lg" : "bg-emerald-50 text-emerald-500")}>
-                        {isDragActive ? <File className="h-7 w-7" /> : <UploadCloud className="h-7 w-7" />}
+                      className="flex flex-col items-center">
+                      <div className={cn("mb-6 flex h-16 w-16 items-center justify-center rounded-[24px] transition-all duration-500 shadow-2xl",
+                        isDragActive ? "bg-orange-500 text-white ring-4 ring-orange-500/20" : "bg-white/5 text-orange-400 ring-1 ring-white/10")}>
+                        {isDragActive ? <Sparkles className="h-8 w-8" /> : <UploadCloud className="h-8 w-8" />}
                       </div>
-                      <h3 className="font-display text-lg font-bold text-emerald-900">
-                        {isDragActive ? "Drop it here!" : "Upload your notes"}
+                      <h3 className="text-xl font-black text-white tracking-tight leading-none mb-3">
+                        {isDragActive ? "Release to process" : "Upload study material"}
                       </h3>
-                      <p className="mt-1 max-w-xs text-sm text-emerald-600">
-                        Drag & drop <strong>handwritten notes</strong>, slides, textbook photos, or printed pages
+                      <p className="max-w-[280px] text-sm text-slate-400 font-medium mb-6">
+                        Drop images of <strong>handwritten notes</strong>, slides, or textbook pages here
                       </p>
-                      <p className="mt-1 text-xs text-emerald-400">
-                        ✍️ AI Vision reads handwriting, diagrams, formulas & annotations
-                      </p>
-                      <div className="mt-3 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-xs font-medium text-emerald-600">
-                        PNG · JPG · WEBP · HEIC · BMP · TIFF · PDF
+                      
+                      <div className="glass-pill text-[10px] text-orange-400 border-orange-500/20 tracking-[0.15em] uppercase px-5">
+                        Handwriting · Diagrams · Formulas
                       </div>
                     </motion.div>
                   )}
@@ -178,37 +176,39 @@ export function Dropzone({ onDropImage, onSubmitText, isUploading = false }: Dro
               </div>
             </motion.div>
           ) : (
-            <motion.div key="text-mode" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }} className="flex flex-col gap-3 p-4">
-              <input type="text" placeholder="Sheet title (optional)" value={title}
-                onChange={e => setTitle(e.target.value)} disabled={isUploading}
-                className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+            <motion.div key="text-mode" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }} className="flex flex-col gap-4 p-8">
+              <div className="space-y-4">
+                <input type="text" placeholder="Note Title (Optional)" value={title}
+                  onChange={e => setTitle(e.target.value)} disabled={isUploading}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all" />
 
-              <div className="relative">
-                <textarea placeholder={"Paste or type your messy notes here...\n\nThe AI will extract, compress, and structure them into a clean one-page cheat sheet."}
-                  value={text} onChange={e => setText(e.target.value)} disabled={isUploading} rows={7}
-                  className="w-full resize-none rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono" />
-                {text.length > 0 && (
-                  <button type="button" onClick={() => setText("")}
-                    className="absolute right-3 top-3 rounded-full p-1 text-emerald-400 hover:bg-emerald-100 transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
+                <div className="relative">
+                  <textarea placeholder={"Paste your messy notes here...\n\nAI will extract, structure, and condense everything into a visual cheat sheet."}
+                    value={text} onChange={e => setText(e.target.value)} disabled={isUploading} rows={8}
+                    className="w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-6 py-5 text-sm leading-relaxed text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all font-mono" />
+                  {text.length > 0 && (
+                    <button type="button" onClick={() => setText("")}
+                      className="absolute right-4 top-4 rounded-xl p-2 text-slate-600 hover:text-white hover:bg-white/5 transition-all">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className={cn("text-xs font-medium transition-colors",
-                  isTextReady ? "text-emerald-500" : "text-emerald-300")}>
-                  {charCount} chars{!isTextReady && charCount > 0 ? ` (need ${10 - charCount} more)` : ""}
+                <span className={cn("text-xs font-bold tracking-tight",
+                  isTextReady ? "text-orange-400" : "text-slate-600")}>
+                  {charCount} Characters {!isTextReady && charCount > 0 ? `(${10 - charCount} more needed)` : ""}
                 </span>
+                
                 <button type="button" onClick={handleTextSubmit} disabled={!isTextReady || isUploading}
-                  className={cn("flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all",
-                    isTextReady && !isUploading
-                      ? "bg-emerald-500 text-white hover:bg-emerald-600 hover:-translate-y-0.5 shadow-emerald-500/20 hover:shadow-lg"
-                      : "bg-emerald-50 text-emerald-300 cursor-not-allowed"
-                  )}>
-                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                  {isUploading ? "Processing..." : "Generate Sheet"}
+                  className="btn-primary py-2.5 px-8">
+                  {isUploading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing</>
+                  ) : (
+                    <><Wand2 className="h-4 w-4 mr-2" /> Generate Sheet</>
+                  )}
                 </button>
               </div>
             </motion.div>

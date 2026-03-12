@@ -5,17 +5,18 @@ import {
     Brain, CheckCircle2, XCircle, ArrowRight, RotateCcw,
     Trophy, Target, Flame, Clock, Sparkles, ChevronRight
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface QuizModeProps {
     quiz: QuizType;
 }
 
-type QuizState = "intro" | "playing" | "review" | "results";
+type QuizState = "intro" | "playing" | "results";
 
-const DIFFICULTY_COLORS = {
-    easy: { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500" },
-    medium: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-500" },
-    hard: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", dot: "bg-red-500" },
+const DIFFICULTY_STYLE = {
+    easy: { text: "text-emerald-400", dot: "bg-emerald-500", glow: "shadow-[0_0_10px_rgba(16,185,129,0.3)]" },
+    medium: { text: "text-orange-400", dot: "bg-orange-500", glow: "shadow-[0_0_10px_rgba(249,115,22,0.3)]" },
+    hard: { text: "text-red-400", dot: "bg-red-500", glow: "shadow-[0_0_10px_rgba(239,68,68,0.3)]" },
 };
 
 export function QuizMode({ quiz }: QuizModeProps) {
@@ -24,7 +25,7 @@ export function QuizMode({ quiz }: QuizModeProps) {
     const [answers, setAnswers] = useState<Map<string, number>>(new Map());
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [showExplanation, setShowExplanation] = useState(false);
-    const [startTime] = useState(Date.now());
+    const [startTime, setStartTime] = useState(Date.now());
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
 
@@ -41,7 +42,6 @@ export function QuizMode({ quiz }: QuizModeProps) {
     }, [answers, questions]);
 
     const totalAnswered = answers.size;
-    const progress = (totalAnswered / questions.length) * 100;
 
     const handleSelectOption = useCallback((optionIndex: number) => {
         if (showExplanation) return;
@@ -52,7 +52,7 @@ export function QuizMode({ quiz }: QuizModeProps) {
             next.set(current.id, optionIndex);
             return next;
         });
-        // Streak tracking
+
         if (optionIndex === current.correctIndex) {
             setStreak(s => {
                 const next = s + 1;
@@ -82,57 +82,46 @@ export function QuizMode({ quiz }: QuizModeProps) {
         setState("intro");
         setStreak(0);
         setBestStreak(0);
+        setStartTime(Date.now());
     }, []);
-
-    const handleReview = useCallback(() => {
-        setCurrentIndex(0);
-        setState("review");
-    }, []);
-
-    const getGrade = (pct: number) => {
-        if (pct >= 90) return { label: "A+", color: "text-emerald-600", bg: "bg-emerald-50", emoji: "🏆", message: "Outstanding! You've mastered this topic!" };
-        if (pct >= 80) return { label: "A", color: "text-emerald-600", bg: "bg-emerald-50", emoji: "🌟", message: "Excellent work! Almost perfect!" };
-        if (pct >= 70) return { label: "B", color: "text-blue-600", bg: "bg-blue-50", emoji: "💪", message: "Great job! You know this material well." };
-        if (pct >= 60) return { label: "C", color: "text-amber-600", bg: "bg-amber-50", emoji: "📚", message: "Good effort! Review the marked sections." };
-        return { label: "D", color: "text-red-600", bg: "bg-red-50", emoji: "🔄", message: "Keep studying! Try again after reviewing." };
-    };
 
     if (!questions.length) {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-emerald-400">
-                <Brain className="h-12 w-12 mb-4 opacity-30" />
-                <p className="text-sm font-medium">No quiz available</p>
+            <div className="flex flex-col items-center justify-center py-20 glass-card bg-white/[0.02]">
+                <Brain className="h-12 w-12 mb-4 text-slate-700 opacity-20" />
+                <p className="text-sm font-black tracking-widest text-slate-500 uppercase">Neural engine idle</p>
             </div>
         );
     }
 
     // ── INTRO SCREEN ─────────────────────────────────────────────────────────
     if (state === "intro") {
-        const diffCounts = { easy: 0, medium: 0, hard: 0 };
-        questions.forEach(q => diffCounts[q.difficulty]++);
-
         return (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-6 py-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-xl shadow-violet-500/30">
-                    <Brain className="h-10 w-10" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-10 py-10">
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-orange-500/20 blur-[80px] rounded-full group-hover:bg-orange-500/30 transition-all duration-700" />
+                    <div className="relative h-24 w-24 rounded-[2.5rem] bg-orange-500 flex items-center justify-center text-white shadow-[0_0_50px_rgba(249,115,22,0.4)] border-4 border-white/10 group-hover:scale-105 transition-transform duration-500">
+                        <Brain className="h-12 w-12" />
+                    </div>
                 </div>
 
-                <div className="text-center">
-                    <h3 className="text-2xl font-bold text-emerald-900 mb-2">Test Your Knowledge</h3>
-                    <p className="text-sm text-emerald-600 max-w-md">
-                        {questions.length} questions generated from your study material.
-                        See how well you understand the concepts!
+                <div className="text-center space-y-4">
+                    <h3 className="text-4xl font-black text-white tracking-tighter uppercase">Knowledge Synthesis</h3>
+                    <p className="text-sm text-slate-400 max-w-sm font-medium leading-relaxed">
+                        Ready to validate your neural retention? {questions.length} hyper-focused questions await your analysis.
                     </p>
                 </div>
 
-                <div className="flex gap-4">
-                    {Object.entries(diffCounts).filter(([, c]) => c > 0).map(([diff, count]) => {
-                        const style = DIFFICULTY_COLORS[diff as keyof typeof DIFFICULTY_COLORS];
+                <div className="flex gap-3">
+                    {["easy", "medium", "hard"].map(diff => {
+                        const count = questions.filter(q => q.difficulty === diff).length;
+                        if (count === 0) return null;
+                        const style = DIFFICULTY_STYLE[diff as keyof typeof DIFFICULTY_STYLE];
                         return (
-                            <div key={diff} className={`flex items-center gap-2 rounded-xl border ${style.border} ${style.bg} px-4 py-2`}>
-                                <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                                <span className={`text-xs font-bold ${style.text} uppercase`}>{diff}</span>
-                                <span className={`text-sm font-black ${style.text}`}>{count}</span>
+                            <div key={diff} className="glass-pill px-4 py-2 border-white/5 bg-white/[0.02] flex items-center gap-2">
+                                <div className={cn("h-1.5 w-1.5 rounded-full", style.dot, style.glow)} />
+                                <span className={cn("text-[9px] font-black uppercase tracking-widest", style.text)}>{diff}</span>
+                                <span className="text-xs font-black text-white ml-1">{count}</span>
                             </div>
                         );
                     })}
@@ -140,11 +129,12 @@ export function QuizMode({ quiz }: QuizModeProps) {
 
                 <button
                     onClick={() => setState("playing")}
-                    className="mt-2 flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
+                    className="group relative h-14 px-10 rounded-2xl bg-white text-black font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden shadow-2xl shadow-white/10"
                 >
-                    <Sparkles className="h-4 w-4" />
-                    Start Quiz
-                    <ChevronRight className="h-4 w-4" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-amber-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="relative z-10 flex items-center gap-3">
+                        Initiate Protocol <ChevronRight className="h-4 w-4" />
+                    </span>
                 </button>
             </motion.div>
         );
@@ -153,234 +143,187 @@ export function QuizMode({ quiz }: QuizModeProps) {
     // ── RESULTS SCREEN ───────────────────────────────────────────────────────
     if (state === "results") {
         const pct = Math.round((score / questions.length) * 100);
-        const grade = getGrade(pct);
         const elapsed = Math.round((Date.now() - startTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-
+        
         return (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center gap-6 py-6">
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center gap-10 py-10">
 
-                <div className="text-6xl mb-2">{grade.emoji}</div>
-
-                <div className="text-center">
-                    <h3 className="text-3xl font-black text-emerald-900 mb-1">Quiz Complete!</h3>
-                    <p className="text-sm text-emerald-600">{grade.message}</p>
-                </div>
-
-                {/* Score indicator */}
-                <div className="relative">
-                    <svg width="180" height="180" viewBox="0 0 180 180">
-                        <circle cx="90" cy="90" r="80" fill="none" stroke="#e2e8f0" strokeWidth="8" />
-                        <circle cx="90" cy="90" r="80" fill="none" stroke={pct >= 70 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444"}
-                            strokeWidth="8" strokeLinecap="round"
-                            strokeDasharray={`${(pct / 100) * 502.65} 502.65`}
-                            transform="rotate(-90 90 90)"
-                            style={{ transition: "stroke-dasharray 1s ease" }} />
+                <div className="relative h-48 w-48 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-white/5 rounded-full shadow-inner" />
+                    <svg className="absolute inset-0 transform -rotate-90">
+                        <circle cx="96" cy="96" r="88" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="12" />
+                        <circle cx="96" cy="96" r="88" fill="none" 
+                            stroke={pct >= 80 ? "#10b981" : pct >= 50 ? "#f97316" : "#ef4444"}
+                            strokeWidth="12" strokeLinecap="round"
+                            strokeDasharray={`${(pct / 100) * 552.9} 552.9`}
+                            className="transition-all duration-1000 ease-out"
+                        />
                     </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className={`text-4xl font-black ${grade.color}`}>{pct}%</span>
-                        <span className={`text-sm font-bold ${grade.color} px-3 py-0.5 rounded-full ${grade.bg}`}>{grade.label}</span>
+                    <div className="relative text-center z-10">
+                        <div className="text-5xl font-black text-white tracking-tighter">{pct}%</div>
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Global Score</div>
                     </div>
+                    {/* Glowing outer ring */}
+                    <div className={cn(
+                        "absolute inset-0 rounded-full blur-[40px] opacity-20",
+                        pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-orange-500" : "bg-red-500"
+                    )} />
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 w-full max-w-sm">
+                <div className="text-center space-y-2">
+                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Retention Summary</h3>
+                    <p className="text-sm text-slate-400 font-medium">Neural processing complete for {questions.length} concepts.</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 w-full max-w-md">
                     {[
-                        { icon: Target, label: "Correct", value: `${score}/${questions.length}`, color: "text-emerald-600" },
-                        { icon: Flame, label: "Best Streak", value: `${bestStreak}🔥`, color: "text-amber-600" },
-                        { icon: Clock, label: "Time", value: `${minutes}:${seconds.toString().padStart(2, "0")}`, color: "text-blue-600" },
+                        { icon: Target, label: "Accuracy", value: `${score}/${questions.length}`, color: "text-white" },
+                        { icon: Flame, label: "Peak Streak", value: bestStreak, color: "text-orange-500" },
+                        { icon: Clock, label: "Sync Time", value: `${elapsed}s`, color: "text-blue-400" },
                     ].map(s => (
-                        <div key={s.label} className="flex flex-col items-center rounded-xl border border-emerald-100 bg-white p-3 shadow-sm">
-                            <s.icon className={`h-4 w-4 ${s.color} mb-1`} />
-                            <span className={`text-lg font-black ${s.color}`}>{s.value}</span>
-                            <span className="text-[10px] text-emerald-400 font-medium">{s.label}</span>
+                        <div key={s.label} className="glass-card p-4 border-white/5 bg-white/[0.02] flex flex-col items-center gap-2">
+                            <s.icon className={cn("h-4 w-4", s.color)} />
+                            <span className={cn("text-xl font-black text-white", s.color)}>{s.value}</span>
+                            <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest">{s.label}</span>
                         </div>
                     ))}
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-3">
-                    <button onClick={handleReview}
-                        className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-6 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">
-                        <Target className="h-4 w-4" />
-                        Review Answers
+                <div className="flex gap-4">
+                    <button onClick={handleRestart}
+                        className="glass-pill h-12 px-8 flex items-center gap-2 border-white/10 text-[11px] font-black text-slate-300 uppercase tracking-widest hover:bg-white/5 transition-all">
+                        <RotateCcw className="h-4 w-4" /> Reset Sync
                     </button>
                     <button onClick={handleRestart}
-                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-xl">
-                        <RotateCcw className="h-4 w-4" />
-                        Try Again
+                        className="glass-pill h-12 px-8 flex items-center gap-2 border-orange-500/20 bg-orange-500/10 text-[11px] font-black text-orange-400 uppercase tracking-widest hover:bg-orange-500/20 transition-all shadow-xl shadow-orange-500/10">
+                        <Trophy className="h-4 w-4" /> Knowledge Base
                     </button>
                 </div>
             </motion.div>
         );
     }
 
-    // ── PLAYING / REVIEW SCREEN ──────────────────────────────────────────────
-    const isReview = state === "review";
-    const reviewAnswer = isReview ? answers.get(current.id) : undefined;
-    const isCorrectReview = reviewAnswer === current.correctIndex;
-
+    // ── PLAYING SCREEN ───────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col gap-4">
-            {/* Progress bar */}
-            <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 rounded-full bg-emerald-100 overflow-hidden">
-                    <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-600"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-                        transition={{ duration: 0.3 }}
-                    />
+        <div className="flex flex-col gap-10">
+            {/* Header info */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                        <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Question {currentIndex + 1} of {questions.length}</div>
+                        <div className="text-sm font-black text-white uppercase tracking-tight">{current.difficulty} Node Synchronization</div>
+                    </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-500">
-                    {currentIndex + 1}/{questions.length}
-                </span>
+                {streak > 1 && (
+                    <div className="glass-pill px-4 py-1.5 border-orange-500/30 bg-orange-500/10 flex items-center gap-2">
+                        <Flame className="h-3.5 w-3.5 text-orange-500 animate-bounce" />
+                        <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">{streak} STREAK</span>
+                    </div>
+                )}
             </div>
 
-            {/* Question Card */}
-            <AnimatePresence mode="wait">
+            {/* Neural Progress Bar */}
+            <div className="h-2 w-full glass-card border-none bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+                    className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600 shadow-[0_0_15px_rgba(249,115,22,0.4)]"
+                />
+            </div>
+
+            {/* Main Interface */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 <motion.div
                     key={current.id}
-                    initial={{ opacity: 0, x: 30 }}
+                    initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
-                    transition={{ duration: 0.25 }}
-                    className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"
+                    className="glass-card p-10 border-white/5 bg-white/[0.02]"
                 >
-                    {/* Question header */}
-                    <div className="flex items-start justify-between gap-4 mb-5">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${DIFFICULTY_COLORS[current.difficulty].bg
-                                    } ${DIFFICULTY_COLORS[current.difficulty].text} ${DIFFICULTY_COLORS[current.difficulty].border}`}>
-                                    <span className={`h-1.5 w-1.5 rounded-full mr-1 ${DIFFICULTY_COLORS[current.difficulty].dot}`} />
-                                    {current.difficulty.toUpperCase()}
-                                </span>
-                                <span className="text-[10px] font-medium text-emerald-400">
-                                    {current.relatedSection}
-                                </span>
-                            </div>
-                            <h4 className="text-base font-bold text-emerald-900 leading-relaxed">{current.question}</h4>
-                        </div>
-
-                        {isReview && (
-                            <div className={`flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl ${isCorrectReview ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                                }`}>
-                                {isCorrectReview ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                            </div>
-                        )}
+                    <div className="text-2xl font-black text-white leading-tight uppercase tracking-tight mb-8">
+                        {current.question}
                     </div>
 
-                    {/* Options */}
-                    <div className="space-y-2.5 mb-4">
-                        {current.options.map((option, optIdx) => {
-                            const isSelected = isReview ? reviewAnswer === optIdx : selectedOption === optIdx;
-                            const isCorrect = optIdx === current.correctIndex;
-                            const showResult = isReview || (showExplanation && isSelected);
-                            const showCorrectHighlight = (isReview || showExplanation) && isCorrect;
-
-                            let borderColor = "border-emerald-100 hover:border-emerald-300";
-                            let bgColor = "bg-white";
-
-                            if (showResult && isSelected && isCorrect) {
-                                borderColor = "border-green-400"; bgColor = "bg-green-50";
-                            } else if (showResult && isSelected && !isCorrect) {
-                                borderColor = "border-red-400"; bgColor = "bg-red-50";
-                            } else if (showCorrectHighlight) {
-                                borderColor = "border-green-300"; bgColor = "bg-green-50/50";
-                            }
-
-                            return (
-                                <button
-                                    key={optIdx}
-                                    onClick={() => !isReview && handleSelectOption(optIdx)}
-                                    disabled={isReview || showExplanation}
-                                    className={`w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all ${borderColor} ${bgColor} ${!isReview && !showExplanation ? "cursor-pointer hover:shadow-sm" : ""
-                                        }`}
-                                >
-                                    <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold ${isSelected ? (isCorrect ? "bg-green-500 text-white" : "bg-red-500 text-white") :
-                                        showCorrectHighlight ? "bg-green-500 text-white" :
-                                            "bg-emerald-50 text-emerald-600"
-                                        }`}>
-                                        {String.fromCharCode(65 + optIdx)}
-                                    </span>
-                                    <span className="text-sm text-emerald-900 font-medium flex-1">{option}</span>
-                                    {showResult && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />}
-                                    {showResult && isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Explanation */}
                     <AnimatePresence>
-                        {(showExplanation || isReview) && (
+                        {showExplanation && (
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="rounded-xl bg-blue-50 border border-blue-200 p-4 mb-2"
+                                className="mt-8 pt-8 border-t border-white/10"
                             >
-                                <p className="text-xs font-bold text-blue-700 mb-1">💡 Explanation</p>
-                                <p className="text-sm text-blue-800 leading-relaxed">{current.explanation}</p>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Sparkles className="h-4 w-4 text-blue-400" />
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Neural Insight</span>
+                                </div>
+                                <p className="text-sm text-slate-300 font-medium leading-relaxed italic">
+                                    "{current.explanation}"
+                                </p>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </motion.div>
-            </AnimatePresence>
 
-            {/* Navigation */}
-            <div className="flex items-center justify-between">
-                {isReview ? (
-                    <>
-                        <button
-                            onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-                            disabled={currentIndex === 0}
-                            className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-30"
-                        >
-                            Previous
-                        </button>
-                        <button onClick={() => setState("results")}
-                            className="text-xs text-emerald-500 font-medium hover:text-emerald-700">
-                            Back to Results
-                        </button>
-                        <button
-                            onClick={() => setCurrentIndex(i => Math.min(questions.length - 1, i + 1))}
-                            disabled={currentIndex === questions.length - 1}
-                            className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-30"
-                        >
-                            Next
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex items-center gap-3 text-xs text-emerald-400 font-medium">
-                            Score: <span className="font-bold text-emerald-600">{score}</span>/{totalAnswered}
-                            {streak > 1 && (
-                                <motion.span
-                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                    className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-amber-700 font-bold"
-                                >
-                                    <Flame className="h-3 w-3" /> {streak} streak!
-                                </motion.span>
-                            )}
-                        </div>
-                        {showExplanation && (
+                <div className="space-y-3">
+                    {current.options.map((option, idx) => {
+                        const isSelected = selectedOption === idx;
+                        const isCorrect = idx === current.correctIndex;
+                        const revealStatus = showExplanation;
+
+                        return (
                             <button
+                                key={idx}
+                                disabled={showExplanation}
+                                onClick={() => handleSelectOption(idx)}
+                                className={cn(
+                                    "w-full group relative h-16 rounded-2xl border transition-all flex items-center px-6 gap-4 overflow-hidden",
+                                    !revealStatus && "bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20 active:scale-[0.98]",
+                                    revealStatus && isCorrect && "bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)]",
+                                    revealStatus && isSelected && !isCorrect && "bg-red-500/10 border-red-500/50",
+                                    revealStatus && !isSelected && !isCorrect && "opacity-20 bg-transparent border-white/5"
+                                )}
+                            >
+                                <div className={cn(
+                                    "h-8 w-8 rounded-xl flex items-center justify-center text-xs font-black transition-all",
+                                    !revealStatus && "bg-white/5 text-slate-400 group-hover:bg-white/10 group-hover:text-white",
+                                    revealStatus && isCorrect && "bg-emerald-500 text-white",
+                                    revealStatus && isSelected && !isCorrect && "bg-red-500 text-white"
+                                )}>
+                                    {String.fromCharCode(65 + idx)}
+                                </div>
+                                <span className={cn(
+                                    "text-sm font-black uppercase tracking-tight flex-1 text-left transition-colors",
+                                    !revealStatus && "text-slate-400 group-hover:text-white",
+                                    revealStatus && isCorrect && "text-emerald-400",
+                                    revealStatus && isSelected && !isCorrect && "text-red-400"
+                                )}>
+                                    {option}
+                                </span>
+                                {revealStatus && isCorrect && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                                {revealStatus && isSelected && !isCorrect && <XCircle className="h-5 w-5 text-red-500" />}
+                            </button>
+                        );
+                    })}
+
+                    <AnimatePresence>
+                        {showExplanation && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
                                 onClick={handleNext}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
+                                className="w-full h-16 rounded-2xl bg-white text-black font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 mt-10 shadow-2xl shadow-white/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
                             >
                                 {currentIndex < questions.length - 1 ? (
-                                    <>Next Question <ArrowRight className="h-4 w-4" /></>
+                                    <>ADVANCE PHASE <ArrowRight className="h-4 w-4" /></>
                                 ) : (
-                                    <>See Results <Trophy className="h-4 w-4" /></>
+                                    <>FINALIZE SYNC <Trophy className="h-4 w-4" /></>
                                 )}
-                            </button>
+                            </motion.button>
                         )}
-                    </>
-                )}
+                    </AnimatePresence>
+                </div>
             </div>
         </div>
     );

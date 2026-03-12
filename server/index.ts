@@ -96,6 +96,11 @@ app.use((req, res, next) => {
       reusePort: true,
     },
     () => {
+      const url = `http://localhost:${port}`;
+      console.log("\n" + "=".repeat(40));
+      console.log(`🚀 OneSheet server is running!`);
+      console.log(`🔗 URL: \x1b[36m${url}\x1b[0m`);
+      console.log("=".repeat(40) + "\n");
       log(`serving on port ${port}`);
     },
   );

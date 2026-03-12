@@ -7,23 +7,33 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Create from "@/pages/Create";
 import CheatSheetDetail from "@/pages/CheatSheetDetail";
+import Login from "@/pages/Login";
 
-function Router() {
+import { useState } from "react";
+import { ChatBot } from "@/components/ChatBot";
+
+function Router({ onAskAI }: { onAskAI: () => void }) {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={() => <Home onAskAI={onAskAI} />} />
+      <Route path="/login" component={Login} />
       <Route path="/create" component={Create} />
-      <Route path="/cheatsheet/:id" component={CheatSheetDetail} />
+      <Route path="/cheatsheet/:id">
+        {(params) => <CheatSheetDetail onAskAI={onAskAI} />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router />
+        <Router onAskAI={() => setIsChatOpen(true)} />
+        <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

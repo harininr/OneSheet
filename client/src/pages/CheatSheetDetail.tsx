@@ -1,38 +1,40 @@
 import { useParams, Link, useLocation } from "wouter";
 import { useCheatSheet, useDeleteCheatSheet, useProcessCheatSheet } from "@/hooks/use-cheatsheets";
-import { Navbar } from "@/components/Navbar";
-import { A4Preview } from "@/components/A4Preview";
+import { Sidebar } from "@/components/Sidebar";
+import { A4Preview, type A4PreviewRef } from "@/components/A4Preview";
 import { ConceptMap } from "@/components/ConceptMap";
 import { KeyTermsPanel } from "@/components/KeyTermsPanel";
 import { QuizMode } from "@/components/QuizMode";
 import {
   Loader2, AlertCircle, ArrowLeft, Image as ImageIcon, CheckCircle2,
-  FileText, Network, BookOpen, Brain, Layers, Trash2, RefreshCw, Sparkles, Copy
+  FileText, Network, BookOpen, Brain, Layers, Trash2, RefreshCw, Sparkles,
+  Home, MessageSquare
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
-type ViewMode = "cheatsheet" | "conceptmap" | "keyterms" | "quiz";
+type ViewMode = "cheatsheet" | "conceptmap" | "keyterms" | "quiz" | "original";
 
 const OCR_STEPS = [
-  "Upload received",
-  "AI Vision reading your notes ✍️",
-  "Generating cheat sheet",
-  "Building concept map",
-  "Extracting key terms",
-  "Creating quiz questions",
-  "Rendering results",
+  "Payload Received",
+  "AI Vision Analytical Phase",
+  "Neural Extraction",
+  "Concept Mapping",
+  "Synthesizing Assessment",
+  "Finalizing Canvas"
 ];
 
-const VIEW_TABS: { key: ViewMode; label: string; icon: React.ElementType; gradient: string }[] = [
-  { key: "cheatsheet", label: "Cheat Sheet", icon: Layers, gradient: "from-emerald-500 to-teal-600" },
-  { key: "conceptmap", label: "Concept Map", icon: Network, gradient: "from-cyan-500 to-blue-600" },
-  { key: "keyterms", label: "Key Terms", icon: BookOpen, gradient: "from-amber-500 to-orange-600" },
-  { key: "quiz", label: "Quiz Mode", icon: Brain, gradient: "from-violet-500 to-purple-600" },
+const VIEW_TABS: { key: ViewMode; label: string; icon: React.ElementType }[] = [
+  { key: "cheatsheet", label: "Cheat Sheet", icon: Layers },
+  { key: "conceptmap", label: "Concept Map", icon: Network },
+  { key: "keyterms", label: "Key Terms", icon: BookOpen },
+  { key: "quiz", label: "Quiz Mode", icon: Brain },
+  { key: "original", label: "Original Scan", icon: ImageIcon },
 ];
 
-export default function CheatSheetDetail() {
+export default function CheatSheetDetail({ onAskAI }: { onAskAI?: () => void }) {
   const { id } = useParams<{ id: string }>();
   const { data: sheet, isLoading, error } = useCheatSheet(Number(id));
   const { toast } = useToast();
@@ -42,40 +44,36 @@ export default function CheatSheetDetail() {
   const [activeMode, setActiveMode] = useState<ViewMode>("cheatsheet");
   const [activeStep, setActiveStep] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const previewRef = useRef<A4PreviewRef>(null);
 
-  // Animate processing steps
   useEffect(() => {
     if (!sheet || sheet.structuredContent) return;
     const timer = setInterval(() => {
       setActiveStep(s => (s < OCR_STEPS.length - 1 ? s + 1 : s));
-    }, 3000);
+    }, 4000);
     return () => clearInterval(timer);
   }, [sheet]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white">
-        <Navbar />
-        <div className="flex h-[calc(100vh-64px)] flex-col items-center justify-center pt-16">
-          <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
-          <h2 className="mt-6 font-display text-2xl font-bold text-emerald-900">Loading...</h2>
-        </div>
+      <div className="min-h-screen bg-[#F8F8FB] dark:bg-[#0E0E14] flex flex-col items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-orange-500 mb-4" />
+        <h2 className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] tracking-tight">Initializing neural canvas...</h2>
       </div>
     );
   }
 
   if (error || !sheet) {
     return (
-      <div className="min-h-screen bg-white">
-        <Navbar />
-        <div className="flex h-[calc(100vh-64px)] flex-col items-center justify-center pt-16">
-          <div className="rounded-full bg-red-50 p-4 text-red-500 mb-4">
+      <div className="min-h-screen bg-[#F8F8FB] dark:bg-[#0E0E14] flex flex-col items-center justify-center text-center px-4">
+        <div className="max-w-md w-full p-8 rounded-2xl border border-[#E4E4EF] dark:border-[#2A2A38] bg-white dark:bg-[#16161F]">
+          <div className="mx-auto w-16 h-16 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
             <AlertCircle className="h-8 w-8" />
           </div>
-          <h2 className="font-display text-2xl font-bold text-emerald-950">Something went wrong</h2>
-          <p className="mt-2 text-emerald-600">We couldn't load this cheat sheet.</p>
+          <h2 className="text-xl font-semibold text-[#0F172A] dark:text-[#F1F5F9] mb-2 tracking-tight">Access Denied</h2>
+          <p className="text-sm text-[#94A3B8] dark:text-[#64748B] mb-8">This collection might have been moved or discarded.</p>
           <Link href="/">
-            <button className="btn-primary mt-6">Go Home</button>
+            <button className="btn-primary w-full px-6 py-2.5 text-sm">Return to Dashboard</button>
           </Link>
         </div>
       </div>
@@ -86,9 +84,9 @@ export default function CheatSheetDetail() {
   const isTextInput = sheet.originalImageUrl === "text-input";
   const content = sheet.structuredContent;
 
-  const hasConceptMap = content?.conceptMap && content.conceptMap.nodes.length > 0;
-  const hasKeyTerms = content?.keyTerms && content.keyTerms.length > 0;
-  const hasQuiz = content?.quiz && content.quiz.questions.length > 0;
+  const hasConceptMap = (content?.conceptMap?.nodes?.length ?? 0) > 0;
+  const hasKeyTerms = (content?.keyTerms?.length ?? 0) > 0;
+  const hasQuiz = (content?.quiz?.questions?.length ?? 0) > 0;
 
   const handleDelete = () => {
     deleteMutation.mutate(sheet.id, {
@@ -104,65 +102,76 @@ export default function CheatSheetDetail() {
     });
   };
 
-  const handleCopyText = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied to clipboard",
-      description: "You can now paste your OCR text anywhere.",
-    });
+  const handleAction = (actionId: string) => {
+    if (actionId === "pdf-export") {
+      previewRef.current?.downloadPDF();
+    } else if (actionId === "ask-ai") {
+      onAskAI?.();
+    } else if (VIEW_TABS.some(tab => tab.key === actionId)) {
+      setActiveMode(actionId as ViewMode);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-emerald-50/20 to-white">
-      <Navbar />
+  const sidebarItems = [
+    { id: "my-sheets", label: "My Sheets", icon: Home, path: "/" },
+    ...VIEW_TABS.map(tab => ({
+      id: tab.key,
+      label: tab.label,
+      icon: tab.icon,
+      action: tab.key,
+      disabled: (tab.key === "conceptmap" && !hasConceptMap) ||
+                (tab.key === "keyterms" && !hasKeyTerms) ||
+                (tab.key === "quiz" && !hasQuiz)
+    })),
+    { id: "pdf-export", label: "PDF Export", icon: Layers, action: "pdf-export" },
+    { id: "ask-ai", label: "Ask AI", icon: MessageSquare, action: "ask-ai" },
+  ];
 
-      <div className="mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <Link href="/">
-            <button className="flex items-center gap-2 text-sm font-medium text-emerald-600 transition-colors hover:text-emerald-500">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </button>
-          </Link>
+  return (
+    <div className="flex min-h-screen bg-[#F8F8FB] dark:bg-[#0E0E14] text-[#0F172A] dark:text-[#F1F5F9]">
+      <Sidebar 
+        onAction={handleAction} 
+        items={sidebarItems.map(item => ({
+          ...item,
+          // Disable items if no content available (handled in UI via isDisabled before, now we need to handle in Sidebar or just here)
+          // For now, let's keep it simple.
+        }))}
+      />
+
+      <main className="flex-1 lg:ml-64 flex flex-col min-w-0">
+        <header className="h-20 flex items-center justify-between px-8 border-b border-[#E4E4EF] dark:border-[#2A2A38] bg-[#F8F8FB] dark:bg-[#0E0E14] sticky top-0 z-30">
+          <div className="flex items-center gap-4 min-w-0">
+            <Link href="/">
+              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors">
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            </Link>
+            <h1 className="text-lg font-semibold tracking-tight truncate max-w-[400px]">{sheet.title}</h1>
+          </div>
 
           <div className="flex items-center gap-3">
-            {sheet.createdAt && (
-              <span className="text-sm text-emerald-500 font-medium">
-                Generated {new Date(sheet.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric", month: "short", day: "numeric"
-                })}
-              </span>
-            )}
-
-            {/* Re-process button */}
-            {!isProcessing && (
+             {!isProcessing && (
               <button
                 onClick={handleReprocess}
                 disabled={processMutation.isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 transition-all hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-50"
+                className="btn-secondary flex items-center gap-2 px-4 py-1.5 text-xs font-semibold"
               >
-                {processMutation.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Re-process
+                <RefreshCw className={cn("h-3.5 w-3.5", processMutation.isPending && "animate-spin")} />
+                Reprocess
               </button>
             )}
 
-            {/* Delete button */}
             {showDeleteConfirm ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-red-500/10 p-1 rounded-lg border border-red-500/20">
                 <button
                   onClick={handleDelete}
-                  disabled={deleteMutation.isPending}
-                  className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+                  className="rounded-md bg-red-500 px-3 py-1 text-[10px] font-bold text-white hover:bg-red-600 transition-colors"
                 >
-                  {deleteMutation.isPending ? "Deleting..." : "Confirm Delete"}
+                  Confirm Delete
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="px-2 text-[10px] font-semibold text-[#94A3B8] dark:text-[#64748B] hover:text-[#0F172A] dark:hover:text-[#F1F5F9]"
                 >
                   Cancel
                 </button>
@@ -170,273 +179,126 @@ export default function CheatSheetDetail() {
             ) : (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-500 transition-all hover:border-red-400 hover:bg-red-50"
+                className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
+                <Trash2 className="h-4 w-4" />
               </button>
             )}
           </div>
-        </div>
+        </header>
 
-        {isProcessing ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-emerald-200 shadow-sm">
-            <div className="relative mb-6">
-              <div className="h-20 w-20 rounded-full border-4 border-emerald-100 animate-pulse" />
-              <Loader2 className="absolute inset-0 m-auto h-10 w-10 animate-spin text-emerald-500" />
-            </div>
-            <h2 className="text-2xl font-bold font-display text-emerald-900">AI at work</h2>
-            <p className="text-emerald-600 mt-2">Building your complete study package...</p>
-
-            <div className="mt-8 w-full max-w-sm space-y-3">
-              {OCR_STEPS.map((step, i) => (
-                <motion.div
-                  key={step}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1, duration: 0.3 }}
-                  className="flex items-center gap-3 text-sm"
-                >
-                  {i < activeStep ? (
-                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-500" />
-                  ) : i === activeStep ? (
-                    <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin text-emerald-500" />
-                  ) : (
-                    <div className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-emerald-200" />
-                  )}
-                  <span className={i <= activeStep ? "text-emerald-900 font-medium" : "text-emerald-300"}>
-                    {step}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Progress bar */}
-            <div className="mt-6 w-full max-w-sm h-1.5 bg-emerald-100 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                initial={{ width: "0%" }}
-                animate={{ width: `${((activeStep + 1) / OCR_STEPS.length) * 100}%` }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* ── Mode Tabs ── */}
-            <div className="mb-8 flex flex-wrap gap-2">
-              {VIEW_TABS.map(tab => {
-                const isActive = activeMode === tab.key;
-                const isDisabled =
-                  (tab.key === "conceptmap" && !hasConceptMap) ||
-                  (tab.key === "keyterms" && !hasKeyTerms) ||
-                  (tab.key === "quiz" && !hasQuiz);
-
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => !isDisabled && setActiveMode(tab.key)}
-                    disabled={isDisabled}
-                    className={`relative flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all ${isActive
-                      ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg`
-                      : isDisabled
-                        ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                        : "bg-white border border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:shadow-sm"
-                      }`}
-                  >
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute inset-0 rounded-xl bg-white/10"
-                        transition={{ type: "spring", bounce: 0.2 }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-              {/* Left Sidebar */}
-              <div className="space-y-6 lg:col-span-1">
-                <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
-                    {isTextInput ? (
-                      <FileText className="h-5 w-5 text-emerald-500" />
-                    ) : (
-                      <ImageIcon className="h-5 w-5 text-emerald-500" />
-                    )}
-                    <h3 className="font-bold text-emerald-900">
-                      {isTextInput ? "Text Input" : "Source Image"}
-                    </h3>
-                  </div>
-
-                  {isTextInput ? (
-                    <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-xs leading-relaxed text-emerald-900 font-mono max-h-48 overflow-y-auto">
-                      {sheet.ocrText || "No content."}
-                    </div>
-                  ) : (
-                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-emerald-50 border border-emerald-100">
-                      <img
-                        src={sheet.originalImageUrl}
-                        alt="Original Upload"
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {!isTextInput && sheet.ocrText && (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm overflow-hidden relative group/sidebar">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold text-emerald-900">Extracted Text</h3>
-                      <button
-                        onClick={() => handleCopyText(sheet.ocrText || "")}
-                        className="p-1.5 rounded-lg bg-white border border-emerald-100 text-emerald-500 opacity-0 group-hover/sidebar:opacity-100 transition-opacity hover:bg-emerald-50"
-                        title="Copy text"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-emerald-600 mb-3 uppercase tracking-wider font-semibold">
-                      Raw text extracted by AI Vision
-                    </p>
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-emerald-200 bg-white p-4 text-xs leading-relaxed text-emerald-900 font-mono scrollbar-thin scrollbar-thumb-emerald-100">
-                      {sheet.ocrText}
-                    </div>
-                  </div>
-                )}
-
-                {/* Study Package info */}
-                <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-4 w-4 text-emerald-500" />
-                    <h3 className="text-sm font-bold text-emerald-900">Study Package</h3>
-                  </div>
-                  <div className="space-y-2 text-xs text-emerald-600">
-                    <div className="flex justify-between">
-                      <span>Sections</span>
-                      <span className="font-semibold text-emerald-900">{content!.sections.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Key Points</span>
-                      <span className="font-semibold text-emerald-900">
-                        {content!.sections.reduce((acc, s) => acc + s.points.length, 0)}
-                      </span>
-                    </div>
-                    {hasConceptMap && (
-                      <div className="flex justify-between">
-                        <span>Concepts</span>
-                        <span className="font-semibold text-emerald-900">{content!.conceptMap!.nodes.length}</span>
-                      </div>
-                    )}
-                    {hasKeyTerms && (
-                      <div className="flex justify-between">
-                        <span>Key Terms</span>
-                        <span className="font-semibold text-emerald-900">{content!.keyTerms!.length}</span>
-                      </div>
-                    )}
-                    {hasQuiz && (
-                      <div className="flex justify-between">
-                        <span>Quiz Questions</span>
-                        <span className="font-semibold text-emerald-900">{content!.quiz!.questions.length}</span>
-                      </div>
-                    )}
-                    {content!.metrics && (
-                      <div className="flex justify-between">
-                        <span>Compression</span>
-                        <span className="font-semibold text-emerald-900">{content!.metrics.reductionPercent}% reduced</span>
-                      </div>
-                    )}
-                    <div className="border-t border-emerald-100 pt-2 mt-2">
-                      <div className="flex justify-between">
-                        <span>AI model</span>
-                        <span className="font-semibold text-emerald-900">Gemini 2.5 Flash</span>
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <span>Source</span>
-                        <span className="font-semibold text-emerald-900">{isTextInput ? "Text" : "Image (Vision AI)"}</span>
-                      </div>
-                      {content!.domain && (
-                        <div className="flex justify-between mt-1">
-                          <span>Domain</span>
-                          <span className="font-semibold text-emerald-900 uppercase">{content!.domain}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Feature availability */}
-                <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-                  <h3 className="text-sm font-bold text-emerald-900 mb-3">Available Modes</h3>
-                  <div className="space-y-2">
-                    {VIEW_TABS.map(tab => {
-                      const available =
-                        tab.key === "cheatsheet" ||
-                        (tab.key === "conceptmap" && hasConceptMap) ||
-                        (tab.key === "keyterms" && hasKeyTerms) ||
-                        (tab.key === "quiz" && hasQuiz);
-
-                      return (
-                        <button
-                          key={tab.key}
-                          onClick={() => available && setActiveMode(tab.key)}
-                          disabled={!available}
-                          className={`flex w-full items-center gap-2 text-xs rounded-lg px-2 py-1.5 transition-all ${available
-                            ? "hover:bg-emerald-50 cursor-pointer"
-                            : "cursor-not-allowed opacity-40"
-                            }`}
-                        >
-                          {available ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                          ) : (
-                            <div className="h-3.5 w-3.5 rounded-full border-2 border-gray-200" />
-                          )}
-                          <span className={available ? "text-emerald-900 font-medium" : "text-gray-300"}>
-                            {tab.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+        <div className="p-8 space-y-8">
+          {isProcessing ? (
+            <div className="max-w-3xl mx-auto py-20 px-8 text-center space-y-12">
+              <div className="flex justify-center">
+                <div className="relative h-20 w-20 flex items-center justify-center">
+                   <div className="absolute inset-0 bg-orange-500/10 rounded-2xl animate-pulse" />
+                   <Sparkles className="h-8 w-8 text-orange-500" />
                 </div>
               </div>
+              
+              <div className="space-y-4">
+                <h2 className="text-3xl font-semibold tracking-tight">AI Vision Synthesis</h2>
+                <p className="text-[#94A3B8] dark:text-[#64748B] text-sm max-w-sm mx-auto">
+                  Transforming your study materials into a multi-dimensional knowledge package.
+                </p>
+              </div>
 
-              {/* Main Content Area */}
-              <div className="lg:col-span-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-md mx-auto">
+                {OCR_STEPS.map((step, i) => (
+                  <div
+                    key={step}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
+                      i < activeStep ? "bg-orange-500/5 border-orange-500/20 text-orange-500" :
+                      i === activeStep ? "bg-black/5 dark:bg-white/5 border-[#F97316]/30 text-[#0F172A] dark:text-[#F1F5F9] shadow-sm" :
+                      "bg-transparent border-[#E4E4EF] dark:border-[#2A2A38] text-[#94A3B8] dark:text-[#64748B] opacity-50"
+                    )}
+                  >
+                    {i < activeStep ? <CheckCircle2 className="h-3.5 w-3.5" /> : 
+                     i === activeStep ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 
+                     <div className="h-3.5 w-3.5 rounded-full border border-current opacity-20" />}
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">{step}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden max-w-md mx-auto">
+                 <motion.div
+                  className="h-full bg-orange-500"
+                  initial={{ width: "0%" }}
+                  animate={{ width: `${((activeStep + 1) / OCR_STEPS.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+              {/* Feature Content Area */}
+              <div className="lg:col-span-12">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeMode}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.3 }}
+                    className="rounded-2xl border border-[#E4E4EF] dark:border-[#2A2A38] bg-white dark:bg-[#16161F] shadow-sm min-h-[800px] overflow-hidden"
                   >
-                    {activeMode === "cheatsheet" && (
-                      <A4Preview data={content!} />
-                    )}
+                    {activeMode === "cheatsheet" && <A4Preview ref={previewRef} data={content!} />}
+                    {activeMode === "conceptmap" && hasConceptMap && <ConceptMap data={content!.conceptMap!} />}
+                    {activeMode === "keyterms" && hasKeyTerms && <KeyTermsPanel terms={content!.keyTerms!} />}
+                    {activeMode === "quiz" && hasQuiz && <QuizMode quiz={content!.quiz!} />}
+                    {activeMode === "original" && (
+                      <div className="p-8 h-full flex flex-col gap-6 overflow-y-auto">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+                            {isTextInput ? <FileText className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold uppercase tracking-widest">{isTextInput ? "Text Input Source" : "Original Scan"}</h3>
+                            <p className="text-xs text-[#94A3B8] dark:text-[#64748B]">The source material used to generate your neural canvas.</p>
+                          </div>
+                        </div>
 
-                    {activeMode === "conceptmap" && hasConceptMap && (
-                      <ConceptMap data={content!.conceptMap!} />
-                    )}
-
-                    {activeMode === "keyterms" && hasKeyTerms && (
-                      <KeyTermsPanel terms={content!.keyTerms!} />
-                    )}
-
-                    {activeMode === "quiz" && hasQuiz && (
-                      <QuizMode quiz={content!.quiz!} />
+                        {isTextInput ? (
+                          <div className="flex-1 rounded-2xl bg-[#F8F8FB] dark:bg-[#0E0E14] border border-[#E4E4EF] dark:border-[#2A2A38] p-8 font-mono text-sm leading-relaxed whitespace-pre-wrap text-[#64748B]">
+                            {sheet.ocrText}
+                          </div>
+                        ) : (
+                          <div className="flex-1 rounded-2xl overflow-hidden border border-[#E4E4EF] dark:border-[#2A2A38] bg-black/5 flex items-center justify-center">
+                            <img 
+                              src={sheet.originalImageUrl} 
+                              className="max-w-full max-h-full object-contain grayscale-[0.3] hover:grayscale-0 transition-all duration-700"
+                              alt="Original study material"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {[
+                            { label: "Sections", val: content!.sections.length, icon: Layers },
+                            { label: "Concepts", val: content!.conceptMap?.nodes.length || 0, icon: Network },
+                            { label: "Key Terms", val: content!.keyTerms?.length || 0, icon: BookOpen },
+                            { label: "Quiz Count", val: content!.quiz?.questions.length || 0, icon: Brain }
+                          ].map(m => (
+                            <div key={m.label} className="p-4 rounded-xl border border-[#E4E4EF] dark:border-[#2A2A38] bg-[#F8F8FB] dark:bg-[#0E0E14]">
+                              <div className="flex items-center gap-2 text-[#94A3B8] dark:text-[#64748B] mb-1">
+                                <m.icon className="h-3 w-3" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{m.label}</span>
+                              </div>
+                              <div className="text-xl font-black text-orange-500">{m.val}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </motion.div>
                 </AnimatePresence>
               </div>
             </div>
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

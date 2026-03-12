@@ -1,50 +1,45 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import type { ConceptMap as ConceptMapType, ConceptNode, ConceptEdge } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
-import { Network, ZoomIn, ZoomOut, Maximize2, Info } from "lucide-react";
+import { Network, ZoomIn, ZoomOut, Maximize2, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ConceptMapProps {
     data: ConceptMapType;
 }
 
-// ── Force-directed layout positions ──────────────────────────────────────────
 interface PositionedNode extends ConceptNode {
     x: number;
     y: number;
 }
 
-const IMPORTANCE_SIZES = { high: 52, medium: 40, low: 32 };
+const IMPORTANCE_SIZES = { high: 56, medium: 42, low: 34 };
 const IMPORTANCE_COLORS = {
-    high: { fill: "#059669", stroke: "#047857", text: "#ffffff", glow: "rgba(5,150,105,0.3)" },
-    medium: { fill: "#3b82f6", stroke: "#2563eb", text: "#ffffff", glow: "rgba(59,130,246,0.3)" },
-    low: { fill: "#8b5cf6", stroke: "#7c3aed", text: "#ffffff", glow: "rgba(139,92,246,0.2)" },
+    high: { fill: "#f97316", stroke: "#fb923c", text: "#ffffff", glow: "rgba(249,115,22,0.4)" },
+    medium: { fill: "#8b5cf6", stroke: "#a78bfa", text: "#ffffff", glow: "rgba(139,92,246,0.3)" },
+    low: { fill: "#1e293b", stroke: "#334155", text: "#94a3b8", glow: "rgba(148,163,184,0.1)" },
 };
 
 const GROUP_COLORS = [
-    "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444",
-    "#06b6d4", "#ec4899", "#84cc16"
+    "#f97316", "#8b5cf6", "#3b82f6", "#06b6d4", "#ec4899", "#84cc16"
 ];
 
 function computeLayout(nodes: ConceptNode[], edges: ConceptEdge[], width: number, height: number): PositionedNode[] {
     if (nodes.length === 0) return [];
 
-    // Group-based radial layout with jitter
     const groups = [...new Set(nodes.map(n => n.group))];
     const cx = width / 2;
     const cy = height / 2;
-    const radius = Math.min(width, height) * 0.32;
+    const radius = Math.min(width, height) * 0.35;
 
     const positioned: PositionedNode[] = nodes.map((node, i) => {
         const groupIndex = groups.indexOf(node.group);
         const nodesInGroup = nodes.filter(n => n.group === node.group);
         const indexInGroup = nodesInGroup.indexOf(node);
 
-        // Spread groups around center
         const groupAngle = (groupIndex / groups.length) * Math.PI * 2 - Math.PI / 2;
-
-        // High importance nodes closer to center
-        const distFactor = node.importance === "high" ? 0.5 : node.importance === "medium" ? 0.8 : 1.0;
-        const groupSpread = nodesInGroup.length > 1 ? (indexInGroup - (nodesInGroup.length - 1) / 2) * 55 : 0;
+        const distFactor = node.importance === "high" ? 0.4 : node.importance === "medium" ? 0.75 : 1.1;
+        const groupSpread = nodesInGroup.length > 1 ? (indexInGroup - (nodesInGroup.length - 1) / 2) * 60 : 0;
 
         const x = cx + Math.cos(groupAngle) * radius * distFactor + Math.cos(groupAngle + Math.PI / 2) * groupSpread;
         const y = cy + Math.sin(groupAngle) * radius * distFactor + Math.sin(groupAngle + Math.PI / 2) * groupSpread;
@@ -52,18 +47,17 @@ function computeLayout(nodes: ConceptNode[], edges: ConceptEdge[], width: number
         return { ...node, x, y };
     });
 
-    // Force-directed relaxation — more iterations for cleaner layout
-    for (let iter = 0; iter < 8; iter++) {
+    for (let iter = 0; iter < 12; iter++) {
         for (let i = 0; i < positioned.length; i++) {
             for (let j = i + 1; j < positioned.length; j++) {
                 const dx = positioned[j].x - positioned[i].x;
                 const dy = positioned[j].y - positioned[i].y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const minDist = 100; // minimum separation
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const minDist = 110; 
                 if (dist < minDist) {
                     const force = (minDist - dist) / 2;
-                    const fx = (dx / Math.max(dist, 1)) * force;
-                    const fy = (dy / Math.max(dist, 1)) * force;
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
                     positioned[i].x -= fx;
                     positioned[i].y -= fy;
                     positioned[j].x += fx;
@@ -73,8 +67,7 @@ function computeLayout(nodes: ConceptNode[], edges: ConceptEdge[], width: number
         }
     }
 
-    // Clamp within bounds
-    const pad = 60;
+    const pad = 80;
     positioned.forEach(n => {
         n.x = Math.max(pad, Math.min(width - pad, n.x));
         n.y = Math.max(pad, Math.min(height - pad, n.y));
@@ -88,13 +81,20 @@ export function ConceptMap({ data }: ConceptMapProps) {
     const [hoveredNode, setHoveredNode] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
-    const [dimensions, setDimensions] = useState({ width: 800, height: 550 });
+    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
     useEffect(() => {
-        if (containerRef.current) {
-            const w = containerRef.current.clientWidth;
-            setDimensions({ width: Math.max(600, w), height: 550 });
-        }
+        const updateDims = () => {
+            if (containerRef.current) {
+                setDimensions({ 
+                    width: containerRef.current.clientWidth, 
+                    height: 600 
+                });
+            }
+        };
+        updateDims();
+        window.addEventListener('resize', updateDims);
+        return () => window.removeEventListener('resize', updateDims);
     }, []);
 
     const nodes = useMemo(
@@ -103,122 +103,118 @@ export function ConceptMap({ data }: ConceptMapProps) {
     );
 
     const nodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
-
     const groups = useMemo(() => [...new Set(data.nodes.map(n => n.group))], [data.nodes]);
 
+    const activeNode = selectedNode || hoveredNode;
+    
     const highlightedEdges = useMemo(() => {
-        if (!hoveredNode && !selectedNode) return new Set<string>();
-        const active = selectedNode || hoveredNode;
+        if (!activeNode) return new Set<string>();
         return new Set(
             data.edges
-                .filter(e => e.from === active || e.to === active)
+                .filter(e => e.from === activeNode || e.to === activeNode)
                 .map((e, i) => `${e.from}-${e.to}-${i}`)
         );
-    }, [hoveredNode, selectedNode, data.edges]);
+    }, [activeNode, data.edges]);
 
     const connectedNodes = useMemo(() => {
-        if (!hoveredNode && !selectedNode) return new Set<string>();
-        const active = selectedNode || hoveredNode;
-        const connected = new Set<string>();
-        connected.add(active!);
+        if (!activeNode) return new Set<string>();
+        const connected = new Set<string>([activeNode]);
         data.edges.forEach(e => {
-            if (e.from === active) connected.add(e.to);
-            if (e.to === active) connected.add(e.from);
+            if (e.from === activeNode) connected.add(e.to);
+            if (e.to === activeNode) connected.add(e.from);
         });
         return connected;
-    }, [hoveredNode, selectedNode, data.edges]);
+    }, [activeNode, data.edges]);
 
     if (!data.nodes.length) {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-emerald-400">
-                <Network className="h-12 w-12 mb-4 opacity-30" />
-                <p className="text-sm font-medium">No concept map data available</p>
+            <div className="flex flex-col items-center justify-center p-20 glass-card bg-white/[0.02]">
+                <Network className="h-12 w-12 mb-4 text-slate-700 animate-pulse" />
+                <p className="text-sm font-black tracking-widest text-slate-500 uppercase">Neural map empty</p>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
-                        <Network className="h-5 w-5" />
+        <div className="flex flex-col gap-6">
+            {/* Immersive Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20 shadow-lg shadow-orange-500/10">
+                        <Network className="h-6 w-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-emerald-900">Smart Concept Map</h3>
-                        <p className="text-xs text-emerald-500">{data.nodes.length} concepts · {data.edges.length} connections</p>
+                        <h3 className="text-xl font-black text-white tracking-tight uppercase">Knowledge Graph</h3>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{data.nodes.length} Nodes · {data.edges.length} Synapses</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={() => setZoom(z => Math.max(0.5, z - 0.15))}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:bg-emerald-50">
-                        <ZoomOut className="h-4 w-4" />
+                
+                <div className="glass-pill p-1.5 flex items-center gap-1.5 border-white/5 bg-white/[0.02]">
+                    <button onClick={() => setZoom(z => Math.max(0.5, z - 0.2))}
+                        className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                        <ZoomOut className="h-4.5 w-4.5" />
                     </button>
-                    <span className="text-xs font-semibold text-emerald-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
-                    <button onClick={() => setZoom(z => Math.min(2, z + 0.15))}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:bg-emerald-50">
-                        <ZoomIn className="h-4 w-4" />
+                    <div className="px-3 text-[10px] font-black text-slate-300 w-12 text-center uppercase tracking-tighter">{Math.round(zoom * 100)}%</div>
+                    <button onClick={() => setZoom(z => Math.min(2, z + 0.2))}
+                        className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                        <ZoomIn className="h-4.5 w-4.5" />
                     </button>
+                    <div className="h-4 w-px bg-white/5 mx-1" />
                     <button onClick={() => setZoom(1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:bg-emerald-50">
-                        <Maximize2 className="h-4 w-4" />
+                        className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                        <Maximize2 className="h-4.5 w-4.5" />
                     </button>
                 </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex flex-wrap items-center gap-3">
-                {groups.map((g, i) => (
-                    <span key={g} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }} />
-                        {g}
-                    </span>
-                ))}
-                <span className="text-gray-300 mx-1">|</span>
-                {Object.entries(IMPORTANCE_SIZES).map(([key, size]) => (
-                    <span key={key} className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 uppercase tracking-wide">
-                        <span className="rounded-full border-2 border-gray-300" style={{ width: size / 3, height: size / 3 }} />
-                        {key}
-                    </span>
-                ))}
+            {/* Neural Legend */}
+            <div className="flex flex-wrap items-center gap-6 px-4">
+                <div className="flex flex-wrap items-center gap-4 border-r border-white/5 pr-6">
+                    {groups.map((g, i) => (
+                        <div key={g} className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]" style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }} />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{g}</span>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex items-center gap-4">
+                    {Object.entries(IMPORTANCE_SIZES).map(([key, size]) => (
+                        <div key={key} className="flex items-center gap-2">
+                             <div className="rounded-full border border-white/10" style={{ width: size / 4, height: size / 4, background: IMPORTANCE_COLORS[key as keyof typeof IMPORTANCE_COLORS].glow }} />
+                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{key}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            {/* SVG Canvas */}
+            {/* Virtual Canvas */}
             <div ref={containerRef}
-                className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 shadow-inner"
-                style={{ height: "550px" }}>
+                className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-black/40 shadow-3xl group/canvas"
+                style={{ height: "600px" }}>
+                
+                {/* Background Decor */}
+                <div className="absolute inset-0 bg-[radial-gradient(#ffffff03_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,transparent_0%,rgba(15,10,30,0.4)_100%)] pointer-events-none" />
 
                 <svg
                     width="100%"
                     height="100%"
                     viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-                    style={{ transform: `scale(${zoom})`, transformOrigin: "center center", transition: "transform 0.3s ease" }}
+                    className="cursor-move"
+                    style={{ transform: `scale(${zoom})`, transformOrigin: "center center", transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}
                 >
                     <defs>
-                        {/* Glow filter */}
-                        <filter id="glow">
-                            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                            <feMerge>
-                                <feMergeNode in="coloredBlur" />
-                                <feMergeNode in="SourceGraphic" />
-                            </feMerge>
+                        <filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="6" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
                         </filter>
-                        {/* Arrow marker */}
-                        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                            <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
+                        <marker id="synapse" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#334155" opacity="0.3" />
                         </marker>
-                        <marker id="arrowhead-active" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                            <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
+                        <marker id="synapse-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#f97316" />
                         </marker>
                     </defs>
-
-                    {/* Grid dots background */}
-                    {Array.from({ length: Math.ceil(dimensions.width / 30) }).map((_, i) =>
-                        Array.from({ length: Math.ceil(dimensions.height / 30) }).map((_, j) => (
-                            <circle key={`${i}-${j}`} cx={i * 30} cy={j * 30} r="0.8" fill="#e2e8f0" opacity="0.5" />
-                        ))
-                    )}
 
                     {/* Edges */}
                     {data.edges.map((edge, i) => {
@@ -228,47 +224,37 @@ export function ConceptMap({ data }: ConceptMapProps) {
 
                         const edgeKey = `${edge.from}-${edge.to}-${i}`;
                         const isHighlighted = highlightedEdges.has(edgeKey);
-                        const isDimmed = (hoveredNode || selectedNode) && !isHighlighted;
+                        const isDimmed = activeNode && !isHighlighted;
 
-                        // Curved path
                         const dx = to.x - from.x;
                         const dy = to.y - from.y;
-                        const mx = (from.x + to.x) / 2 + dy * 0.15;
-                        const my = (from.y + to.y) / 2 - dx * 0.15;
-
-                        // Shorten line to not overlap node circles
-                        const fromSize = IMPORTANCE_SIZES[from.importance] / 2 + 4;
-                        const toSize = IMPORTANCE_SIZES[to.importance] / 2 + 4;
                         const dist = Math.sqrt(dx * dx + dy * dy);
+                        const mx = (from.x + to.x) / 2 + dy * 0.12;
+                        const my = (from.y + to.y) / 2 - dx * 0.12;
+
+                        const fromSize = IMPORTANCE_SIZES[from.importance] / 2 + 6;
+                        const toSize = IMPORTANCE_SIZES[to.importance] / 2 + 6;
                         const startX = from.x + (dx / dist) * fromSize;
                         const startY = from.y + (dy / dist) * fromSize;
                         const endX = to.x - (dx / dist) * toSize;
                         const endY = to.y - (dy / dist) * toSize;
 
                         return (
-                            <g key={edgeKey} style={{ transition: "opacity 0.3s" }} opacity={isDimmed ? 0.1 : 1}>
-                                {/* Edge line */}
+                            <g key={edgeKey} opacity={isDimmed ? 0.05 : 1} style={{ transition: "opacity 0.5s ease" }}>
                                 <path
                                     d={`M ${startX} ${startY} Q ${mx} ${my} ${endX} ${endY}`}
                                     fill="none"
-                                    stroke={isHighlighted ? "#10b981" : "#cbd5e1"}
-                                    strokeWidth={isHighlighted ? 2.5 : 1.5}
-                                    markerEnd={isHighlighted ? "url(#arrowhead-active)" : "url(#arrowhead)"}
-                                    style={{ transition: "stroke 0.3s, stroke-width 0.3s" }}
+                                    stroke={isHighlighted ? "#f97316" : "#1e293b"}
+                                    strokeWidth={isHighlighted ? 3 : 1.5}
+                                    strokeDasharray={isHighlighted ? "none" : "4 2"}
+                                    markerEnd={isHighlighted ? "url(#synapse-active)" : "url(#synapse)"}
+                                    style={{ transition: "stroke 0.4s, stroke-width 0.4s" }}
                                 />
-                                {/* Edge label */}
-                                <text
-                                    x={mx}
-                                    y={my - 6}
-                                    textAnchor="middle"
-                                    fill={isHighlighted ? "#059669" : "#94a3b8"}
-                                    fontSize="9"
-                                    fontWeight={isHighlighted ? 700 : 500}
-                                    fontFamily="'DM Sans', sans-serif"
-                                    style={{ transition: "fill 0.3s" }}
-                                >
-                                    {edge.label}
-                                </text>
+                                {isHighlighted && (
+                                    <text x={mx} y={my - 8} textAnchor="middle" fill="#fb923c" fontSize="10" fontWeight="900" className="uppercase tracking-tighter">
+                                        {edge.label}
+                                    </text>
+                                )}
                             </g>
                         );
                     })}
@@ -277,114 +263,114 @@ export function ConceptMap({ data }: ConceptMapProps) {
                     {nodes.map((node, i) => {
                         const size = IMPORTANCE_SIZES[node.importance];
                         const colors = IMPORTANCE_COLORS[node.importance];
-                        const groupIndex = groups.indexOf(node.group);
-                        const groupColor = GROUP_COLORS[groupIndex % GROUP_COLORS.length];
+                        const groupColor = GROUP_COLORS[groups.indexOf(node.group) % GROUP_COLORS.length];
                         const isHovered = hoveredNode === node.id;
                         const isSelected = selectedNode === node.id;
-                        const isDimmed = (hoveredNode || selectedNode) && !connectedNodes.has(node.id);
+                        const isActive = isHovered || isSelected;
+                        const isDimmed = activeNode && !connectedNodes.has(node.id);
 
                         return (
                             <g
                                 key={node.id}
-                                style={{ cursor: "pointer", transition: "opacity 0.3s" }}
-                                opacity={isDimmed ? 0.15 : 1}
+                                className="transition-all duration-500"
+                                opacity={isDimmed ? 0.1 : 1}
                                 onMouseEnter={() => setHoveredNode(node.id)}
                                 onMouseLeave={() => setHoveredNode(null)}
                                 onClick={() => setSelectedNode(s => s === node.id ? null : node.id)}
                             >
-                                {/* Outer glow ring */}
-                                {(isHovered || isSelected) && (
-                                    <circle cx={node.x} cy={node.y} r={size / 2 + 8} fill={colors.glow} filter="url(#glow)" />
-                                )}
+                                <circle cx={node.x} cy={node.y} r={size / 2 + 10} fill={isActive ? colors.glow : "transparent"} style={{ transition: "all 0.4s" }} />
+                                
+                                <circle cx={node.x} cy={node.y} r={size / 2 + 4} fill="none" stroke={groupColor}
+                                    strokeWidth={isActive ? 3 : 1.5} opacity={isActive ? 1 : 0.3} style={{ transition: "all 0.4s" }} />
 
-                                {/* Group color ring */}
-                                <circle cx={node.x} cy={node.y} r={size / 2 + 3} fill="none" stroke={groupColor}
-                                    strokeWidth={isHovered || isSelected ? 3 : 2}
-                                    strokeDasharray={node.importance === "low" ? "3 3" : "none"}
-                                    opacity={0.6} />
-
-                                {/* Main circle */}
                                 <circle
                                     cx={node.x}
                                     cy={node.y}
                                     r={size / 2}
-                                    fill={colors.fill}
-                                    stroke={colors.stroke}
-                                    strokeWidth={isHovered || isSelected ? 2.5 : 1.5}
-                                    style={{ transition: "r 0.2s" }}
+                                    fill={isActive ? colors.fill : "#0f172a"}
+                                    stroke={isActive ? colors.stroke : "rgba(255,255,255,0.1)"}
+                                    strokeWidth={isActive ? 3 : 1.5}
+                                    filter={isActive ? "url(#nodeGlow)" : "none"}
+                                    style={{ transition: "all 0.4s" }}
                                 />
 
-                                {/* Label */}
                                 <text
                                     x={node.x}
                                     y={node.y}
                                     textAnchor="middle"
                                     dominantBaseline="central"
-                                    fill={colors.text}
-                                    fontSize={node.label.length > 12 ? 8 : node.label.length > 8 ? 9 : 10}
-                                    fontWeight={700}
-                                    fontFamily="'DM Sans', sans-serif"
+                                    fill={isActive ? colors.text : "rgba(255,255,255,0.4)"}
+                                    fontSize={size / 4.5}
+                                    fontWeight={900}
+                                    className="uppercase tracking-tighter pointer-events-none"
+                                    style={{ transition: "fill 0.4s" }}
                                 >
-                                    {node.label.length > 16 ? node.label.slice(0, 14) + "…" : node.label}
+                                    {node.label.length > 12 ? node.label.slice(0, 10) + ".." : node.label}
                                 </text>
                             </g>
                         );
                     })}
                 </svg>
+
+                {/* Status Overlay */}
+                <div className="absolute bottom-8 left-8 flex items-center gap-2 glass-pill px-4 py-2 border-white/5 pointer-events-none">
+                    <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Neural Link Active</span>
+                </div>
             </div>
 
-            {/* Selected node details */}
+            {/* Insight Panel */}
             <AnimatePresence>
                 {selectedNode && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, height: 0 }}
-                        animate={{ opacity: 1, y: 0, height: "auto" }}
-                        exit={{ opacity: 0, y: 10, height: 0 }}
-                        className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm"
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        className="glass-card p-6 border-white/10 bg-white/[0.03] shadow-3xl"
                     >
                         {(() => {
                             const node = nodeMap.get(selectedNode);
                             if (!node) return null;
-                            const inEdges = data.edges.filter(e => e.to === node.id);
-                            const outEdges = data.edges.filter(e => e.from === node.id);
+                            const neighbors = data.edges
+                                .filter(e => e.from === node.id || e.to === node.id)
+                                .map(e => e.from === node.id ? nodeMap.get(e.to) : nodeMap.get(e.from));
+                            
                             return (
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl text-white font-bold text-sm"
+                                <div className="flex flex-col md:flex-row gap-8 items-start">
+                                    <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] text-white font-black text-2xl border-4 border-white/5 shadow-2xl"
                                         style={{ background: IMPORTANCE_COLORS[node.importance].fill }}>
-                                        {node.label.slice(0, 2).toUpperCase()}
+                                        {node.label.slice(0, 1).toUpperCase()}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-sm font-bold text-emerald-900">{node.label}</h4>
-                                        <p className="text-xs text-emerald-500 mb-2">
-                                            {node.group} · {node.importance} importance
-                                        </p>
-                                        {inEdges.length > 0 && (
-                                            <div className="text-xs text-gray-600 mb-1">
-                                                <span className="font-semibold text-emerald-700">Incoming: </span>
-                                                {inEdges.map(e => `${nodeMap.get(e.from)?.label || e.from} (${e.label})`).join(", ")}
+                                    <div className="flex-1 space-y-4">
+                                        <div>
+                                            <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{node.label}</h4>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{node.group}</span>
+                                                <div className="h-1 w-1 rounded-full bg-white/20" />
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{node.importance} priority neural center</span>
                                             </div>
-                                        )}
-                                        {outEdges.length > 0 && (
-                                            <div className="text-xs text-gray-600">
-                                                <span className="font-semibold text-emerald-700">Outgoing: </span>
-                                                {outEdges.map(e => `${nodeMap.get(e.to)?.label || e.to} (${e.label})`).join(", ")}
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                                            <div>
+                                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] block mb-2">Connected Synapses</span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {neighbors.map((n, i) => n && (
+                                                        <div key={i} className="glass-pill px-2.5 py-1 text-[9px] font-black text-slate-400 border-white/5">{n.label}</div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        )}
+                                            <div className="flex items-end justify-end">
+                                                <button onClick={() => setSelectedNode(null)} className="glass-pill px-6 py-2 text-[10px] font-black text-orange-500 border-orange-500/20 hover:bg-orange-500/10 transition-all uppercase tracking-widest">Terminate Focus</button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button onClick={() => setSelectedNode(null)}
-                                        className="text-xs text-emerald-400 hover:text-emerald-600 font-medium">
-                                        Close
-                                    </button>
                                 </div>
                             );
                         })()}
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <p className="text-[10px] text-emerald-400 text-center">
-                Click a concept to explore connections · Hover to highlight relationships
-            </p>
         </div>
     );
 }
