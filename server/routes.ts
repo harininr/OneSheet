@@ -10,6 +10,7 @@ import { routeAITask } from "./services/aiRouter";
 import { generateWithGroq, chatWithGroq } from "./services/groqService";
 import { parseAIResponse, normaliseContent } from "./services/geminiService";
 import { SYSTEM_PROMPTS, VISION_PROMPT, COMPREHENSIVE_PROMPT } from "./services/prompts";
+import { extractTextWithTesseract } from "./services/ocrService";
 
 // Upload configuration — accept images up to 10MB
 const upload = multer({
@@ -214,13 +215,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           return res.status(404).json({ message: "Image file not found on server." });
         }
 
-        const imageBuffer = fs.readFileSync(imagePath);
-        const base64Image = imageBuffer.toString("base64");
-        const mimeType = getMimeType(imagePath);
-        
-        console.log(`[AI Router] Phase 1: vision/ocr/doc → Gemini (${mimeType})`);
         console.time(`[AI PROCESS] Phase 1: OCR`);
-        const extractedText = await routeAITask("ocr", VISION_PROMPT, base64Image, undefined, mimeType);
+        
+        // ── 1a: Attempt Tesseract OCR First ──
+        console.log(`[AI Router] Phase 1a: local/ocr → Tesseract`);
+        let extractedText = await extractTextWithTesseract(imagePath);
+
+        // ── 1b: Fallback to Gemini if Tesseract fails/low confidence ──
+        if (!extractedText) {
+          console.log(`[AI Router] Phase 1b: vision/ocr fallback → Gemini`);
+          const imageBuffer = fs.readFileSync(imagePath);
+          const base64Image = imageBuffer.toString("base64");
+          const mimeType = getMimeType(imagePath);
+          extractedText = await routeAITask("ocr", VISION_PROMPT, base64Image, undefined, mimeType);
+        }
+
         console.timeEnd(`[AI PROCESS] Phase 1: OCR`);
         
         await storage.updateCheatSheet(id, { ocrText: extractedText });

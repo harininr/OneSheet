@@ -84,10 +84,3 @@ The server will start (typically on `http://localhost:5000`), and the terminal w
 **NEVER** commit your `.env` file to GitHub. It contains private API keys and database credentials. The project is pre-configured with a `.gitignore` to prevent accidental uploads.
 
 ---
-
-## 🤝 Contributing
-Contributions are welcome! Feel free to open an issue or submit a pull request for new features or bug fixes.
-
----
-
-*Powered by Advanced Agentic Coding.*
